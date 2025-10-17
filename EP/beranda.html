@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beranda — Ranting Talitakumi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ====== Tambahan agar halaman stabil ====== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      font-family: 'Poppins', sans-serif;
+      background-color: #081c66;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    header.topbar {
+      background-color: #3a80e9;
+      color: white;
+      padding: 10px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-circle {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: white;
+      color: #3a80e9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .brand-title {
+      font-weight: 600;
+      font-size: 18px;
+    }
+    .muted {
+      color: #666;
+      font-size: 14px;
+    }
+    nav.nav-right a {
+      color: white;
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+    nav.nav-right a:hover {
+      text-decoration: underline;
+    }
+    nav.nav-right .active {
+      text-decoration: underline;
+    }
+    .btn.ghost {
+      background: white;
+      color: #3a80e9;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: 0.3s;
+      margin-left: 10px;
+    }
+    .btn.ghost:hover {
+      background:' #e8f0fe';
+    }
+
+    main.container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-top: 30px;
+    }
+    .welcome {
+      flex: 1;
+      min-width: 60%;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .card.mini {
+      background: #f5f7ff;
+      padding: 15px;
+      border-radius: 10px;
+      transition: 0.3s;
+    }
+    .card.mini:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card.mini a.btn {
+      display: inline-block;
+      background: #3a80e9;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 5px;
+      text-decoration: none;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    .side-card {
+      flex: 0 0 30%;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      height: fit-content;
+    }
+    footer.site-footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 10px 0;
+      color: #555;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand-left">
+        <div class="logo-circle small">RT</div>
+        <div>
+          <div class="brand-title">Ranting Talitakumi</div>
+          <div class="muted small">Desa • Kecamatan • Kabupaten</div>
+        </div>
+      </div>
+      <nav class="nav-right">
+        <a href="beranda.html" class="active">Beranda</a>
+        <a href="sejarah.html">Sejarah</a>
+        <a href="pengurus.html">Pengurus</a>
+        <a href="program.html">Program</a>
+        <a href="galeri.html">Galeri</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container main-grid">
+    <section class="welcome card">
+      <h2>Selamat datang di Beranda</h2>
+      <p class="muted">Halo Admin — ini adalah halaman beranda. Dari sini kamu bisa masuk ke halaman Sejarah, Pengurus, Program, dan Galeri. Klik tombol "Lihat Selengkapnya" pada setiap kartu untuk membuka halaman masing-masing.</p>
+
+      <div class="grid-2" style="margin-top:18px">
+        <div class="card mini">
+          <h3>Sejarah</h3>
+          <p class="muted">Ringkasan singkat sejarah ranting...</p>
+          <a class="btn small" href="sejarah.html">Lihat Selengkapnya</a>
+        </div>
+
+        <div class="card mini">
+          <h3>Pengurus</h3>
+          <p class="muted">Daftar pengurus inti ranting.</p>
+          <a class="btn small" href="pengurus.html">Lihat Selengkapnya</a>
+        </div>
+
+        <div class="card mini">
+          <h3>Program</h3>
+          <p class="muted">Singkat program dan kegiatan.</p>
+          <a class="btn small" href="program.html">Lihat Selengkapnya</a>
+        </div>
+
+        <div class="card mini">
+          <h3>Galeri</h3>
+          <p class="muted">Foto-foto kegiatan dan dokumentasi.</p>
+          <a class="btn small" href="galeri.html">Lihat Selengkapnya</a>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side-card card">
+      <h4>Info Singkat</h4>
+      <p class="muted">Alamat: Jl. Contoh No.1<br>WA: +62 8xx xxxx xxxx</p>
+      <h4 style="margin-top:12px">Agenda Terdekat</h4>
+      <ul class="muted">
+        <li>Pelatihan Kepemudaan — 12 Okt 2025</li>
+        <li>Jalan Sehat — 25 Nov 2025</li>
+      </ul>
+    </aside>
+  </main>
+  <footer class="site-footer container">
+    © 2025 Ranting Talitakumi — Semua hak dilindungi.
+  </footer>
+</body>
+</html>

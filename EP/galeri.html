@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galeri — Ranting Talitakumi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #023a47;
+      --bg: #f0f6ff;
+      --text: #0b2447;
+    }
+
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      width: 90%;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    header.topbar {
+      background: var(--accent);
+      color: white;
+      padding: 12px 0;
+    }
+
+    header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-circle {
+      width: 40px; height: 40px;
+      background: white;
+      color: var(--accent);
+      border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      font-weight: 700;
+    }
+
+    .nav-right a {
+      color: white;
+      text-decoration: none;
+      margin-left: 18px;
+      font-weight: 500;
+    }
+
+    .nav-right a.active {
+      border-bottom: 2px solid white;
+      padding-bottom: 3px;
+    }
+
+    main h2 {
+      text-align: center;
+      margin: 40px 0 20px;
+      font-size: 1.8rem;
+    }
+
+    /* ==== GALERI ==== */
+    .gallery-list {
+      display: flex;
+      flex-direction: column; /* foto menurun ke bawah */
+      gap: 25px;
+      margin-bottom: 60px;
+    }
+
+    .gallery-item {
+      background: white;
+      padding: 10px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .gallery-item img:hover {
+      transform: scale(1.03);
+    }
+
+    /* ==== MODAL ==== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.4s;
+    }
+
+    .modal-inner {
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 90%;
+      animation: zoomIn 0.4s;
+    }
+
+    .modal-inner img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 15px;
+      margin-bottom: 12px;
+    }
+
+    .modal-caption {
+      color: #444;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .btn {
+      margin-top: 15px;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 25px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      font-size: 0.9rem;
+      background: #e8f1ff;
+    }
+
+    /* Animasi */
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+
+    @keyframes zoomIn {
+      from {transform: scale(0.85);}
+      to {transform: scale(1);}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand-left">
+        <div class="logo-circle">RT</div>
+        <div>
+          <div class="brand-title">Ranting Talitakumi</div>
+          <div class="muted small">Galeri</div>
+        </div>
+      </div>
+      <nav class="nav-right">
+        <a href="beranda.html">Beranda</a>
+        <a href="sejarah.html">Sejarah</a>
+        <a href="pengurus.html">Pengurus</a>
+        <a href="program.html">Program</a>
+        <a href="galeri.html" class="active">Galeri</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2>Galeri Kegiatan</h2>
+
+    <div class="gallery-list">
+      <div class="gallery-item" onclick="openModal('Foto/3d54cf33-c7b8-4c98-91e3-c34aed4973e2.jpeg', 'Kegiatan pembagian sembako dan pelayanan masyarakat oleh anggota Ranting Talitakumi di lingkungan sekitar.')">
+        <img src="Foto/3d54cf33-c7b8-4c98-91e3-c34aed4973e2.jpeg">
+      </div>
+
+      <div class="gallery-item" onclick="openModal('Foto/8f6b86cc-ed63-4b1c-934f-2ad081343899.jpeg', 'Pelatihan dasar kepemimpinan untuk membangun karakter dan solidaritas antar anggota muda Talitakumi.')">
+        <img src="Foto/8f6b86cc-ed63-4b1c-934f-2ad081343899.jpeg">
+      </div>
+
+      <div class="gallery-item" onclick="openModal('Foto/54d283e2-221d-4e52-b034-3995832129d8.jpeg', 'Kegiatan ibadah dan doa bersama yang rutin dilakukan setiap minggu sebagai bentuk kebersamaan rohani.')">
+        <img src="Foto/54d283e2-221d-4e52-b034-3995832129d8.jpeg">
+      </div>
+
+      <div class="gallery-item" onclick="openModal('Foto/aad012ba-c212-4025-9c96-4955c3a58591.jpeg', 'Lomba kreativitas dan kegiatan kebersamaan untuk mempererat hubungan antar anggota muda.')">
+        <img src="Foto/aad012ba-c212-4025-9c96-4955c3a58591.jpeg">
+      </div>
+    </div>
+  </main>
+
+  <!-- ==== MODAL ==== -->
+  <div id="modal" class="modal" onclick="closeModal(event)">
+    <div class="modal-inner" onclick="event.stopPropagation()">
+      <img id="modalImg" src="" alt="preview">
+      <div class="modal-caption" id="modalCaption"></div>
+      <button class="btn" onclick="closeModal()">Tutup</button>
+    </div>
+  </div>
+
+  <footer class="site-footer container">
+    © 2025 Ranting Talitakumi
+  </footer>
+
+  <script>
+    function openModal(src, caption){
+      document.getElementById('modalImg').src = src;
+      document.getElementById('modalCaption').innerText = caption;
+      document.getElementById('modal').style.display = 'flex';
+    }
+    function closeModal(){
+      document.getElementById('modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

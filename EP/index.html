@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Opening — Ranting Talitakumi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f0f6ff;
+      --text: #0b2447;
+      --accent: #2e8bfa;
+    }
+
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    /* ==== BAGIAN ATAS ==== */
+    .opening {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      text-align: center;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .opening img.bg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.3;
+      z-index: 0;
+      animation: zoomIn 8s ease-in-out infinite alternate;
+    }
+
+    .content {
+      position: relative;
+      z-index: 10;
+      color: var(--text);
+      animation: fadeIn 2s ease-in forwards;
+    }
+
+    .content h1 {
+      font-size: 2.8rem;
+      letter-spacing: 2px;
+      animation: slideIn 1.5s ease-out forwards;
+    }
+
+    .content p {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      color: #555;
+      opacity: 0;
+      animation: fadeUp 2s 1.5s forwards;
+    }
+
+    .btn {
+      margin-top: 30px;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 25px;
+      background: var(--accent);
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      opacity: 0;
+      animation: fadeUp 2s 2.5s forwards;
+      transition: transform 0.3s;
+    }
+
+    .btn:hover {
+      transform: scale(1.1);
+    }
+
+    /* ==== BAGIAN BAWAH (FOTO) ==== */
+    .photo-section {
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      padding: 60px 20px;
+    }
+
+    .photo-section h2 {
+      color: var(--text);
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-align: center;
+      animation: fadeIn 2s;
+    }
+
+    .photo-gallery {
+      display: flex;
+      flex-direction: column; /* Menurun ke bawah */
+      align-items: center;
+      gap: 40px;
+      width: 100%;
+      max-width: 400px; /* Supaya rapi di tengah */
+    }
+
+    .photo-gallery img {
+      width: 100%;
+      max-width: 350px;
+      height: auto;
+      border-radius: 20px;
+      object-fit: cover;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+      opacity: 0;
+      transform: scale(0.9) translateY(40px);
+      transition: all 1s ease;
+    }
+
+    /* Saat muncul di layar */
+    .photo-gallery img.visible {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    /* ==== ANIMASI ==== */
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    @keyframes fadeUp { from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);} }
+    @keyframes slideIn { from{opacity:0; transform:translateY(-30px);} to{opacity:1; transform:translateY(0);} }
+    @keyframes zoomIn { from{transform:scale(1);} to{transform:scale(1.1);} }
+
+    /* Tombol scroll ke bawah */
+    .scroll-down {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1rem;
+      color: var(--text);
+      cursor: pointer;
+      animation: bounce 1.5s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translate(-50%, 0); }
+      50% { transform: translate(-50%, -10px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==== BAGIAN ATAS ==== -->
+  <div class="opening">
+    <img src="C:\Users\vensc\OneDrive\Pictures\EP\Foto\backround.jpg" class="bg" alt="background">
+    <div class="content">
+      <h1>Selamat Datang di<br>Ranting Talitakumi</h1>
+      <p>Hai Anak Muda Bangkitlah.</p>
+      <button class="btn" onclick="goToSite()">Masuk ke Situs</button>
+    </div>
+    <div class="scroll-down" onclick="scrollToPhotos()">⬇️ Gulir ke Bawah</div>
+  </div>
+
+  <!-- ==== BAGIAN BAWAH (FOTO) ==== -->
+  <div class="photo-section" id="photos">
+    <h2>TALITAKUMI</h2>
+    <div class="photo-gallery">
+      <img src="Foto/3d54cf33-c7b8-4c98-91e3-c34aed4973e2.jpeg" alt="foto1">
+      <img src="Foto/8f6b86cc-ed63-4b1c-934f-2ad081343899.jpeg" alt="foto2">
+      <img src="Foto/54d283e2-221d-4e52-b034-3995832129d8.jpeg" alt="foto3">
+      <img src="Foto/475a6805-9ce0-41ad-a04a-20ebd92bcaf6.jpeg" alt="foto4">
+      <img src="Foto/aad012ba-c212-4025-9c96-4955c3a58591.jpeg" alt="foto5">
+    </div>
+  </div>
+
+  <script>
+    // Tombol masuk ke situs
+    function goToSite(){
+      document.body.style.opacity = 0;
+      setTimeout(()=> window.location.href = "beranda.html", 1000);
+    }
+
+    // Scroll halus ke bagian foto
+    function scrollToPhotos(){
+      document.getElementById('photos').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Efek animasi muncul saat di-scroll
+    window.addEventListener('scroll', () => {
+      const images = document.querySelectorAll('.photo-gallery img');
+      const triggerBottom = window.innerHeight * 0.85;
+
+      images.forEach(img => {
+        const boxTop = img.getBoundingClientRect().top;
+        if (boxTop < triggerBottom) {
+          img.classList.add('visible');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
