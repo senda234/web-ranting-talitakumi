@@ -3,207 +3,542 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Opening — Ranting Talitakumi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <title>Opening - Ranting Talitakumi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f0f6ff;
-      --text: #0b2447;
-      --accent: #2e8bfa;
-    }
-
-    * {
-      margin: 0; padding: 0; box-sizing: border-box;
+      --ink: #10213f;
+      --muted: #607086;
+      --gold: #f8c45f;
+      --teal: #14b8a6;
+      --paper: #f7fbff;
+      --white: #ffffff;
       font-family: 'Poppins', sans-serif;
     }
 
-    body {
-      background: var(--bg);
-      overflow-x: hidden;
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
       scroll-behavior: smooth;
     }
 
-    /* ==== BAGIAN ATAS ==== */
-    .opening {
-      height: 100vh;
+    body {
+      margin: 0;
+      background: #081c66;
+      color: var(--ink);
+      font-family: inherit;
+      overflow-x: hidden;
+      transition: opacity 0.6s ease;
+    }
+
+    .opening-shell {
+      min-height: 100vh;
+    }
+
+    .opening-hero {
+      position: relative;
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      text-align: center;
-      background: var(--bg);
+      align-items: flex-end;
       overflow: hidden;
+      padding: 30px;
+      color: white;
+      background: url("Foto/backround.jpg") center/cover no-repeat;
     }
 
-    .opening img.bg {
+    .opening-hero::before {
+      content: "";
       position: absolute;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.3;
-      z-index: 0;
-      animation: zoomIn 8s ease-in-out infinite alternate;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(3, 7, 18, 0.88), rgba(3, 7, 18, 0.42) 54%, rgba(3, 7, 18, 0.78)),
+        linear-gradient(180deg, rgba(3, 7, 18, 0.16), rgba(3, 7, 18, 0.68));
     }
 
-    .content {
+    .opening-topbar {
+      position: absolute;
+      top: 18px;
+      left: 30px;
+      right: 30px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 10px 12px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(16px);
+    }
+
+    .opening-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .opening-logo {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #0f766e, #2563eb);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 12px 24px rgba(15, 118, 110, 0.26);
+    }
+
+    .opening-brand strong {
+      display: block;
+      line-height: 1.2;
+    }
+
+    .opening-brand span {
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.88rem;
+    }
+
+    .top-link {
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: white;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      transition: background 0.24s ease, transform 0.24s ease;
+    }
+
+    .top-link:hover {
+      background: rgba(255, 255, 255, 0.24);
+      transform: translateY(-1px);
+    }
+
+    .opening-content {
       position: relative;
-      z-index: 10;
-      color: var(--text);
-      animation: fadeIn 2s ease-in forwards;
+      z-index: 1;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 28px;
+      align-items: end;
+      padding: 110px 0 44px;
     }
 
-    .content h1 {
-      font-size: 2.8rem;
-      letter-spacing: 2px;
-      animation: slideIn 1.5s ease-out forwards;
+    .opening-kicker {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
-    .content p {
-      font-size: 1.2rem;
-      margin-top: 10px;
-      color: #555;
-      opacity: 0;
-      animation: fadeUp 2s 1.5s forwards;
+    .opening-title {
+      max-width: 780px;
+      margin: 18px 0 14px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 4.7rem;
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
+    .opening-title span {
+      color: var(--gold);
+    }
+
+    .opening-copy {
+      max-width: 680px;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+      line-height: 1.85;
+      font-size: 1rem;
+    }
+
+    .opening-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 26px;
     }
 
     .btn {
-      margin-top: 30px;
-      padding: 10px 28px;
-      border: none;
-      border-radius: 25px;
-      background: var(--accent);
-      color: white;
-      font-size: 1rem;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-family: inherit;
+      font-weight: 700;
       cursor: pointer;
-      opacity: 0;
-      animation: fadeUp 2s 2.5s forwards;
-      transition: transform 0.3s;
+      text-decoration: none;
+      transition: transform 0.24s ease, background 0.24s ease;
     }
 
     .btn:hover {
-      transform: scale(1.1);
+      transform: translateY(-2px);
     }
 
-    /* ==== BAGIAN BAWAH (FOTO) ==== */
+    .btn-primary {
+      background: var(--gold);
+      color: #10213f;
+    }
+
+    .btn-primary:hover {
+      background: #ffd77a;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .verse-panel {
+      padding: 20px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(12px);
+    }
+
+    .verse-panel span {
+      display: block;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.88rem;
+    }
+
+    .verse-panel strong {
+      display: block;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem;
+      line-height: 1;
+      color: white;
+    }
+
+    .verse-panel p {
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, 0.78);
+      line-height: 1.7;
+      font-size: 0.94rem;
+    }
+
     .photo-section {
-      min-height: 100vh;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 30px;
-      padding: 60px 20px;
+      background: var(--paper);
+      padding: 72px 24px;
     }
 
-    .photo-section h2 {
-      color: var(--text);
-      font-size: 2rem;
-      margin-bottom: 20px;
-      text-align: center;
-      animation: fadeIn 2s;
+    .photo-inner {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(270px, 0.8fr) minmax(0, 1.2fr);
+      gap: 28px;
+      align-items: start;
     }
 
-    .photo-gallery {
-      display: flex;
-      flex-direction: column; /* Menurun ke bawah */
-      align-items: center;
-      gap: 40px;
-      width: 100%;
-      max-width: 400px; /* Supaya rapi di tengah */
+    .section-kicker {
+      display: inline-flex;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #0f4c81;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
-    .photo-gallery img {
-      width: 100%;
-      max-width: 350px;
-      height: auto;
-      border-radius: 20px;
-      object-fit: cover;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+    .photo-text h2 {
+      margin: 16px 0 12px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem;
+      line-height: 1;
+      letter-spacing: 0;
+      color: var(--ink);
+    }
+
+    .photo-text p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.85;
+    }
+
+    .photo-mosaic {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: 180px;
+      gap: 14px;
+    }
+
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 22px;
+      background: #0f172a;
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.16);
       opacity: 0;
-      transform: scale(0.9) translateY(40px);
-      transition: all 1s ease;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
     }
 
-    /* Saat muncul di layar */
-    .photo-gallery img.visible {
+    .photo-card.visible {
       opacity: 1;
-      transform: scale(1) translateY(0);
+      transform: translateY(0);
     }
 
-    /* ==== ANIMASI ==== */
-    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
-    @keyframes fadeUp { from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);} }
-    @keyframes slideIn { from{opacity:0; transform:translateY(-30px);} to{opacity:1; transform:translateY(0);} }
-    @keyframes zoomIn { from{transform:scale(1);} to{transform:scale(1.1);} }
-
-    /* Tombol scroll ke bawah */
-    .scroll-down {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 1rem;
-      color: var(--text);
-      cursor: pointer;
-      animation: bounce 1.5s infinite;
+    .photo-card.large {
+      grid-column: span 2;
+      grid-row: span 2;
     }
 
-    @keyframes bounce {
-      0%, 100% { transform: translate(-50%, 0); }
-      50% { transform: translate(-50%, -10px); }
+    .photo-card.tall {
+      grid-row: span 2;
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.35s ease;
+    }
+
+    .photo-card:hover img {
+      transform: scale(1.06);
+    }
+
+    .enter-strip {
+      margin-top: 34px;
+      padding: 22px;
+      border-radius: 26px;
+      background: #10213f;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .enter-strip strong {
+      display: block;
+      margin-bottom: 4px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.9rem;
+      line-height: 1;
+    }
+
+    .enter-strip span {
+      color: rgba(255, 255, 255, 0.72);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 900px) {
+      .opening-content,
+      .photo-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .verse-panel {
+        width: min(420px, 100%);
+      }
+
+      .photo-mosaic {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .opening-hero {
+        padding: 18px;
+      }
+
+      .opening-topbar {
+        align-items: flex-start;
+        top: 12px;
+        left: 18px;
+        right: 18px;
+        padding: 10px;
+      }
+
+      .opening-logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+      }
+
+      .opening-brand span {
+        display: none;
+      }
+
+      .top-link {
+        padding: 9px 12px;
+        font-size: 0.84rem;
+      }
+
+      .opening-content {
+        padding: 116px 0 28px;
+      }
+
+      .opening-title {
+        font-size: 3rem;
+        line-height: 0.96;
+      }
+
+      .opening-actions,
+      .enter-strip {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      .photo-section {
+        padding: 54px 18px;
+      }
+
+      .photo-text h2 {
+        font-size: 2.2rem;
+      }
+
+      .photo-mosaic {
+        grid-template-columns: 1fr;
+        grid-auto-rows: 280px;
+      }
+
+      .photo-card.large,
+      .photo-card.tall {
+        grid-column: auto;
+        grid-row: auto;
+      }
     }
   </style>
 </head>
 <body>
+  <main class="opening-shell">
+    <section class="opening-hero">
+      <header class="opening-topbar">
+        <div class="opening-brand">
+          <div class="opening-logo">RT</div>
+          <div>
+            <strong>Ranting Talitakumi</strong>
+            <span>AMGPM Cabang Pniel</span>
+          </div>
+        </div>
+        <a class="top-link" href="beranda.html">Masuk Situs</a>
+      </header>
 
-  <!-- ==== BAGIAN ATAS ==== -->
-  <div class="opening">
-    <img src="C:\Users\vensc\OneDrive\Pictures\EP\Foto\backround.jpg" class="bg" alt="background">
-    <div class="content">
-      <h1>Selamat Datang di<br>Ranting Talitakumi</h1>
-      <p>Hai Anak Muda Bangkitlah.</p>
-      <button class="btn" onclick="goToSite()">Masuk ke Situs</button>
-    </div>
-    <div class="scroll-down" onclick="scrollToPhotos()">⬇️ Gulir ke Bawah</div>
-  </div>
+      <div class="opening-content">
+        <div>
+          <span class="opening-kicker">Selamat Datang</span>
+          <h1 class="opening-title"><span>Talita Kum</span><br>Hai Anak Muda Bangkitlah</h1>
+          <p class="opening-copy">
+            Ruang digital AMGPM Ranting Talitakumi untuk mengenal sejarah,
+            pengurus, program pelayanan, dan dokumentasi kebersamaan dalam
+            panggilan iman.
+          </p>
+          <div class="opening-actions">
+            <button class="btn btn-primary" type="button" onclick="goToSite()">Masuk ke Situs</button>
+            <button class="btn btn-secondary" type="button" onclick="scrollToPhotos()">Lihat Dokumentasi</button>
+          </div>
+        </div>
 
-  <!-- ==== BAGIAN BAWAH (FOTO) ==== -->
-  <div class="photo-section" id="photos">
-    <h2>TALITAKUMI</h2>
-    <div class="photo-gallery">
-      <img src="Foto/3d54cf33-c7b8-4c98-91e3-c34aed4973e2.jpeg" alt="foto1">
-      <img src="Foto/8f6b86cc-ed63-4b1c-934f-2ad081343899.jpeg" alt="foto2">
-      <img src="Foto/54d283e2-221d-4e52-b034-3995832129d8.jpeg" alt="foto3">
-      <img src="Foto/475a6805-9ce0-41ad-a04a-20ebd92bcaf6.jpeg" alt="foto4">
-      <img src="Foto/aad012ba-c212-4025-9c96-4955c3a58591.jpeg" alt="foto5">
-    </div>
-  </div>
+        <aside class="verse-panel">
+          <span>Markus 5:41</span>
+          <strong>Talita Kum</strong>
+          <p>Seruan untuk bangkit, melayani, dan menjadi berkat bagi jemaat.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="photo-section" id="photos">
+      <div class="photo-inner">
+        <div class="photo-text">
+          <span class="section-kicker">Dokumentasi</span>
+          <h2>Jejak kebersamaan dalam pelayanan</h2>
+          <p>
+            Setiap foto menyimpan cerita tentang persekutuan, sukacita, dan
+            pelayanan pemuda Ranting Talitakumi. Dari halaman ini, pengunjung
+            dapat langsung masuk ke situs utama untuk melihat informasi lengkap.
+          </p>
+        </div>
+
+        <div class="photo-mosaic">
+          <div class="photo-card large">
+            <img src="Foto/3d54cf33-c7b8-4c98-91e3-c34aed4973e2.jpeg" alt="Dokumentasi kebersamaan Ranting Talitakumi">
+          </div>
+          <div class="photo-card">
+            <img src="Foto/8f6b86cc-ed63-4b1c-934f-2ad081343899.jpeg" alt="Dokumentasi kegiatan Talitakumi">
+          </div>
+          <div class="photo-card tall">
+            <img src="Foto/54d283e2-221d-4e52-b034-3995832129d8.jpeg" alt="Dokumentasi pelayanan Talitakumi">
+          </div>
+          <div class="photo-card">
+            <img src="Foto/475a6805-9ce0-41ad-a04a-20ebd92bcaf6.jpeg" alt="Dokumentasi anggota Talitakumi">
+          </div>
+          <div class="photo-card">
+            <img src="Foto/aad012ba-c212-4025-9c96-4955c3a58591.jpeg" alt="Dokumentasi sukacita Talitakumi">
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-inner">
+        <div></div>
+        <div class="enter-strip">
+          <div>
+            <strong>Masuk ke Beranda</strong>
+            <span>Lanjutkan untuk melihat sejarah, pengurus, program, dan galeri lengkap.</span>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="goToSite()">Buka Situs</button>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <script>
-    // Tombol masuk ke situs
-    function goToSite(){
+    function goToSite() {
       document.body.style.opacity = 0;
-      setTimeout(()=> window.location.href = "beranda.html", 1000);
+      setTimeout(() => {
+        window.location.href = "beranda.html";
+      }, 500);
     }
 
-    // Scroll halus ke bagian foto
-    function scrollToPhotos(){
+    function scrollToPhotos() {
       document.getElementById('photos').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // Efek animasi muncul saat di-scroll
-    window.addEventListener('scroll', () => {
-      const images = document.querySelectorAll('.photo-gallery img');
-      const triggerBottom = window.innerHeight * 0.85;
+    const revealCards = () => {
+      const cards = document.querySelectorAll('.photo-card');
+      const triggerBottom = window.innerHeight * 0.86;
 
-      images.forEach(img => {
-        const boxTop = img.getBoundingClientRect().top;
-        if (boxTop < triggerBottom) {
-          img.classList.add('visible');
+      cards.forEach((card) => {
+        if (card.getBoundingClientRect().top < triggerBottom) {
+          card.classList.add('visible');
         }
       });
-    });
+    };
+
+    window.addEventListener('scroll', revealCards);
+    window.addEventListener('load', revealCards);
   </script>
 </body>
 </html>
