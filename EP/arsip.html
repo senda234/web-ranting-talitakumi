@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Arsip Foto - Ranting Talitakumi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand-left">
+        <div class="logo-circle">RT</div>
+        <div>
+          <div class="brand-title">Ranting Talitakumi</div>
+          <div class="muted small">Arsip Foto</div>
+        </div>
+      </div>
+      <nav class="nav-right">
+        <a href="beranda.html">Beranda</a>
+        <a href="sejarah.html">Sejarah</a>
+        <a href="pengurus.html">Pengurus</a>
+        <a href="program.html">Program</a>
+        <a href="galeri.html" class="active">Galeri</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container archive-page">
+    <section class="archive-hero">
+      <a class="archive-back" href="galeri.html">Kembali ke Galeri</a>
+      <span class="gallery-badge">Isi Arsip</span>
+      <h1 id="archiveTitle">Arsip Foto</h1>
+      <p id="archiveDescription">Dokumentasi tersusun sesuai folder foto Ranting Talitakumi.</p>
+      <div class="gallery-stats">
+        <div>
+          <strong id="archiveCount">0 Gambar</strong>
+          <span>Total isi arsip</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="archive-toolbar" aria-label="Pilihan folder arsip">
+      <div id="albumTabs" class="album-tabs"></div>
+    </section>
+
+    <section id="archiveGrid" class="archive-grid" aria-label="Isi folder arsip"></section>
+  </main>
+
+  <div id="galleryModal" class="gallery-modal" aria-hidden="true">
+    <div class="gallery-modal-inner" role="dialog" aria-modal="true" aria-label="Preview foto arsip">
+      <button class="gallery-modal-close" type="button" aria-label="Tutup preview">Tutup</button>
+      <img id="galleryModalImg" src="" alt="Preview foto arsip">
+    </div>
+  </div>
+
+  <footer class="site-footer container">
+    &copy; 2025 Ranting Talitakumi
+  </footer>
+
+  <script>
+    const archives = [
+      {
+        slug: 'bidang-i',
+        title: 'Bidang I',
+        folder: 'Bidang I',
+        description: 'Arsip dokumentasi kegiatan Bidang I.',
+        files: ['IMG-20250917-WA0050.jpg','IMG-20250917-WA0060.jpg','IMG-20250917-WA0129.jpg','IMG-20250917-WA0154.jpg','IMG-20250917-WA0156.jpg','IMG-20250917-WA0162.jpg','IMG-20250917-WA0171.jpg','IMG-20250917-WA0173.jpg','IMG-20250917-WA0203.jpg','IMG-20250917-WA0209.jpg','IMG-20250917-WA0211.jpg','IMG-20250917-WA0235.jpg','IMG-20250917-WA0240.jpg','IMG-20260217-WA0083(1).jpg','IMG-20260217-WA0099.jpg','IMG-20260517-WA0043(1).jpg','IMG-20260517-WA0044.jpg','IMG-20260517-WA0046.jpg','IMG-20260517-WA0047.jpg','IMG-20260517-WA0048.jpg','IMG-20260517-WA0058(1).jpg','IMG-20260517-WA0058.jpg','IMG_6073.CR2','IMG_6245.JPG','IMG_6247.CR2','IMG_6253.CR2']
+      },
+      {
+        slug: 'bidang-ii',
+        title: 'Bidang II',
+        folder: 'Bidang II',
+        description: 'Arsip dokumentasi kegiatan Bidang II.',
+        files: ['IMG-20250606-WA0010_113814.jpg','IMG-20250606-WA0014_113838.jpg','IMG-20260322-WA0021.jpg','IMG-20260322-WA0071.jpg','IMG-20260322-WA0073.jpg','IMG-20260322-WA0082.jpg','IMG-20260329-WA0026.jpg','IMG-20260329-WA0044.jpg','IMG-20260330-WA0011.jpg','IMG-20260330-WA0035.jpg','IMG-20260406-WA0010.jpg','IMG-20260406-WA0047.jpg','IMG-20260517-WA0013.jpg','IMG-20260517-WA0015.jpg','IMG-20260517-WA0016.jpg','IMG-20260517-WA0017.jpg','IMG-20260517-WA0018.jpg','IMG-20260517-WA0022.jpg','IMG-20260517-WA0023(1).jpg','IMG-20260517-WA0023.jpg','IMG-20260517-WA0024.jpg','IMG-20260517-WA0025.jpg','IMG-20260517-WA0026.jpg','IMG-20260517-WA0027.jpg','IMG-20260517-WA0029.jpg','IMG-20260517-WA0030.jpg','IMG-20260517-WA0031.jpg','IMG-20260517-WA0032.jpg','IMG-20260517-WA0035.jpg','IMG-20260517-WA0036.jpg','IMG-20260517-WA0037.jpg','IMG-20260517-WA0045.jpg','IMG-20260517-WA0054.jpg','IMG-20260517-WA0056.jpg','IMG-20260517-WA0057.jpg','IMG-20260517-WA0061.jpg','IMG-20260517-WA0062.jpg','IMG-20260517-WA0063.jpg','IMG-20260517-WA0065.jpg','motion_photo_592761262542641191.jpg']
+      },
+      {
+        slug: 'bidang-iii',
+        title: 'Bidang III',
+        folder: 'Bidang III',
+        description: 'Arsip dokumentasi kegiatan Bidang III.',
+        files: ['IMG-20250717-WA0019.jpg','IMG-20250717-WA0021.jpg','IMG-20251030-WA0012.jpg','IMG-20251030-WA0019.jpg','IMG-20251030-WA0024.jpg','IMG-20251030-WA0028.jpg','IMG-20251220-WA0086.jpg','IMG-20251220-WA0092.jpg','IMG-20251220-WA0094.jpg','IMG-20251220-WA0102.jpg','IMG-20251220-WA0110.jpg','IMG-20251220-WA0114.jpg','IMG-20251220-WA0118.jpg','IMG-20251221-WA0064.jpg','IMG-20251221-WA0069.jpg','IMG-20251221-WA0153.jpg']
+      },
+      {
+        slug: 'bidang-v',
+        title: 'Bidang V',
+        folder: 'Bidang V',
+        description: 'Arsip dokumentasi kegiatan Bidang V.',
+        files: ['IMG-20251122-WA0205.jpg','IMG-20251122-WA0209.jpg','IMG-20251207-WA0027.jpg','IMG-20251209-WA0135.jpg','IMG-20251209-WA0136.jpg','IMG-20251209-WA0137.jpg','IMG-20251209-WA0138.jpg','IMG-20251209-WA0139.jpg','IMG-20260318-WA0024.jpg','IMG-20260517-WA0014.jpg','IMG-20260517-WA0019.jpg','IMG-20260517-WA0020.jpg','IMG-20260517-WA0021.jpg','IMG-20260517-WA0028.jpg','IMG-20260517-WA0033.jpg','IMG-20260517-WA0034.jpg','IMG-20260517-WA0038.jpg','IMG-20260517-WA0040.jpg','IMG-20260517-WA0041.jpg','IMG-20260517-WA0049.jpg','IMG-20260517-WA0050.jpg','IMG-20260517-WA0052.jpg','IMG-20260517-WA0053.jpg','IMG-20260517-WA0059.jpg','IMG-20260517-WA0064.jpg','IMG-20260517-WA0066.jpg']
+      },
+      {
+        slug: 'pniel-talent',
+        title: 'Pniel Talent',
+        folder: 'Pniel Talent',
+        description: 'Arsip dokumentasi kegiatan Pniel Talent.',
+        files: ['IMG-20251205-WA0153.jpg','IMG-20251205-WA0155.jpg','IMG-20251205-WA0242.jpg','IMG-20251205-WA0252.jpg','IMG-20251205-WA0253.jpg','IMG-20251205-WA0278.jpg','IMG-20251205-WA0279.jpg','IMG-20251205-WA0281.jpg','IMG-20251205-WA0282.jpg']
+      },
+      {
+        slug: 'sbc',
+        title: 'SBC',
+        folder: 'SBC',
+        description: 'Arsip dokumentasi kegiatan SBC.',
+        files: ['IMG-20251012-WA0021.jpg','IMG-20251012-WA0083.jpg','IMG-20251012-WA0088.jpg','IMG-20251013-WA0021.jpg','IMG-20251013-WA0106.jpg','IMG-20251013-WA0108.jpg','IMG-20251013-WA0162.jpg','IMG-20251018-WA0027.jpg','IMG_20251018_190613.jpg']
+      }
+    ];
+
+    const archiveTitle = document.getElementById('archiveTitle');
+    const archiveDescription = document.getElementById('archiveDescription');
+    const archiveCount = document.getElementById('archiveCount');
+    const archiveGrid = document.getElementById('archiveGrid');
+    const albumTabs = document.getElementById('albumTabs');
+    const galleryModal = document.getElementById('galleryModal');
+    const galleryModalImg = document.getElementById('galleryModalImg');
+    const galleryClose = document.querySelector('.gallery-modal-close');
+
+    const imagePattern = /\.(jpe?g|png|webp|gif)$/i;
+    const params = new URLSearchParams(window.location.search);
+    const requestedAlbum = params.get('album');
+    const activeArchive = archives.find((archive) => archive.slug === requestedAlbum) || archives[0];
+
+    function fileUrl(archive, file) {
+      return `Foto/${encodeURIComponent(archive.folder)}/${encodeURIComponent(file)}`;
+    }
+
+    function renderTabs() {
+      albumTabs.innerHTML = archives.map((archive) => {
+        const activeClass = archive.slug === activeArchive.slug ? ' active' : '';
+        return `<a class="album-tab${activeClass}" href="arsip.html?album=${archive.slug}">${archive.title}</a>`;
+      }).join('');
+    }
+
+    function renderArchive(archive) {
+      document.title = `${archive.title} - Arsip Foto Talitakumi`;
+      archiveTitle.textContent = archive.title;
+      archiveDescription.textContent = archive.description;
+      archiveCount.textContent = `${archive.files.length} Gambar`;
+
+      archiveGrid.innerHTML = archive.files.map((file) => {
+        const src = fileUrl(archive, file);
+
+        if (!imagePattern.test(file)) {
+          return `
+            <a class="archive-file archive-raw" href="${src}">
+              <span>RAW</span>
+              <strong>${file}</strong>
+              <em>File arsip non-preview</em>
+            </a>
+          `;
+        }
+
+        return `
+          <button class="archive-file archive-photo" type="button" data-src="${src}">
+            <img src="${src}" alt="${archive.title}" loading="lazy">
+          </button>
+        `;
+      }).join('');
+
+      const archiveItems = [...document.querySelectorAll('.archive-file')];
+
+      function getMosaicColumns() {
+        if (window.matchMedia('(max-width: 560px)').matches) {
+          return 1;
+        }
+        if (window.matchMedia('(max-width: 768px)').matches) {
+          return 2;
+        }
+        if (window.matchMedia('(max-width: 900px)').matches) {
+          return 4;
+        }
+        return 5;
+      }
+
+      function placeMosaicItems() {
+        const gap = 8;
+        const columns = getMosaicColumns();
+        const columnWidth = (archiveGrid.clientWidth - (gap * (columns - 1))) / columns;
+        const heights = Array(columns).fill(0);
+
+        archiveItems.forEach((item) => {
+          const ratio = Number(item.dataset.ratio) || 1;
+          const isLandscape = item.classList.contains('archive-photo-landscape');
+          const span = isLandscape && columns > 1 ? 2 : 1;
+          let targetColumn = 0;
+          let bestScore = Infinity;
+          let shortestHeight = 0;
+
+          for (let index = 0; index <= columns - span; index += 1) {
+            const group = heights.slice(index, index + span);
+            const candidateHeight = Math.max(...group);
+            const heightGap = Math.max(...group) - Math.min(...group);
+            const score = span > 1 ? (heightGap * 6) + candidateHeight : candidateHeight;
+
+            if (score < bestScore) {
+              bestScore = score;
+              shortestHeight = candidateHeight;
+              targetColumn = index;
+            }
+          }
+
+          const width = (columnWidth * span) + (gap * (span - 1));
+          const height = item.classList.contains('archive-raw') ? 150 : width / ratio;
+          const left = targetColumn * (columnWidth + gap);
+          const top = shortestHeight;
+
+          item.style.width = `${width}px`;
+          item.style.height = `${height}px`;
+          item.style.transform = `translate(${left}px, ${top}px)`;
+
+          for (let index = targetColumn; index < targetColumn + span; index += 1) {
+            heights[index] = top + height + gap;
+          }
+        });
+
+        archiveGrid.style.height = `${Math.max(...heights)}px`;
+      }
+
+      document.querySelectorAll('.archive-raw').forEach((card) => {
+        card.dataset.ratio = '1';
+      });
+
+      document.querySelectorAll('.archive-photo').forEach((card) => {
+        const image = card.querySelector('img');
+
+        function prepareMosaicItem() {
+          const ratio = image.naturalWidth / image.naturalHeight;
+
+          card.classList.remove('archive-photo-landscape', 'archive-photo-portrait', 'archive-photo-square');
+          if (ratio > 1.18) {
+            card.classList.add('archive-photo-landscape');
+          } else if (ratio < 0.86) {
+            card.classList.add('archive-photo-portrait');
+          } else {
+            card.classList.add('archive-photo-square');
+          }
+
+          card.dataset.ratio = String(ratio);
+          placeMosaicItems();
+        }
+
+        image.addEventListener('load', prepareMosaicItem);
+
+        if (image.complete) {
+          prepareMosaicItem();
+        }
+
+        card.addEventListener('click', () => {
+          galleryModalImg.src = card.dataset.src;
+          galleryModal.classList.add('open');
+          galleryModal.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      placeMosaicItems();
+    }
+
+    window.addEventListener('resize', () => {
+      const images = [...document.querySelectorAll('.archive-photo img')];
+      images.forEach((image) => {
+        const card = image.closest('.archive-photo');
+        if (card && image.complete && image.naturalWidth) {
+          card.dataset.ratio = String(image.naturalWidth / image.naturalHeight);
+        }
+      });
+      const loaded = images.every((image) => image.complete);
+      if (loaded || !images.length) {
+        const event = new Event('resize-mosaic');
+        archiveGrid.dispatchEvent(event);
+      }
+    });
+
+    archiveGrid.addEventListener('resize-mosaic', () => {
+      const items = [...document.querySelectorAll('.archive-file')];
+      if (!items.length) {
+        return;
+      }
+      const gap = 8;
+      const columns = window.matchMedia('(max-width: 560px)').matches
+        ? 1
+        : window.matchMedia('(max-width: 768px)').matches
+          ? 2
+          : window.matchMedia('(max-width: 900px)').matches
+            ? 4
+            : 5;
+      const columnWidth = (archiveGrid.clientWidth - (gap * (columns - 1))) / columns;
+      const heights = Array(columns).fill(0);
+
+      items.forEach((item) => {
+        const ratio = Number(item.dataset.ratio) || 1;
+        const span = item.classList.contains('archive-photo-landscape') && columns > 1 ? 2 : 1;
+        let targetColumn = 0;
+        let bestScore = Infinity;
+        let shortestHeight = 0;
+
+        for (let index = 0; index <= columns - span; index += 1) {
+          const group = heights.slice(index, index + span);
+          const candidateHeight = Math.max(...group);
+          const heightGap = Math.max(...group) - Math.min(...group);
+          const score = span > 1 ? (heightGap * 6) + candidateHeight : candidateHeight;
+
+          if (score < bestScore) {
+            bestScore = score;
+            shortestHeight = candidateHeight;
+            targetColumn = index;
+          }
+        }
+
+        const width = (columnWidth * span) + (gap * (span - 1));
+        const height = item.classList.contains('archive-raw') ? 150 : width / ratio;
+        const left = targetColumn * (columnWidth + gap);
+        const top = shortestHeight;
+
+        item.style.width = `${width}px`;
+        item.style.height = `${height}px`;
+        item.style.transform = `translate(${left}px, ${top}px)`;
+
+        for (let index = targetColumn; index < targetColumn + span; index += 1) {
+          heights[index] = top + height + gap;
+        }
+      });
+
+      archiveGrid.style.height = `${Math.max(...heights)}px`;
+    });
+
+    function closeGalleryModal() {
+      galleryModal.classList.remove('open');
+      galleryModal.setAttribute('aria-hidden', 'true');
+      galleryModalImg.src = '';
+    }
+
+    galleryClose.addEventListener('click', closeGalleryModal);
+    galleryModal.addEventListener('click', (event) => {
+      if (event.target === galleryModal) {
+        closeGalleryModal();
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeGalleryModal();
+      }
+    });
+
+    renderTabs();
+    renderArchive(activeArchive);
+  </script>
+</body>
+</html>
