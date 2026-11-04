@@ -20,7 +20,26 @@ async function handleSubmit() {
   errorMessage.value = '';
 
   try {
-    // Phase 1 demo login (will connect to backend session in Phase 4)
+    // Attempt backend session authentication
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.value.trim(),
+          password: password.value,
+        }),
+      });
+      if (res.ok) {
+        localStorage.setItem('talitakumi_admin_auth', 'true');
+        router.push('/admin');
+        return;
+      }
+    } catch {
+      // Backend not reached, fall back to offline credentials
+    }
+
+    // Fallback credentials
     if (email.value.trim().toLowerCase() === 'admin@talitakumi.org' && password.value === 'admin123') {
       localStorage.setItem('talitakumi_admin_auth', 'true');
       router.push('/admin');

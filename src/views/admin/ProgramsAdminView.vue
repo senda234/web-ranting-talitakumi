@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useContentStore } from '@/stores/content';
+import { useNotificationStore } from '@/stores/notifications';
 import {
   Plus,
   Edit2,
@@ -17,6 +18,7 @@ import type { Department, Program, ProgramActivity } from '@/types';
 import { uploadImageFile } from '@/utils/uploader';
 
 const contentStore = useContentStore();
+const notificationStore = useNotificationStore();
 const departments = computed(() => contentStore.visibleDepartments);
 const programsByDepartment = computed(() => contentStore.programsByDepartment);
 
@@ -87,11 +89,13 @@ async function handleDeptPhotoSelected(e: Event) {
     });
     deptImageUrl.value = res.url;
     deptUploadStatus.value = 'Foto bidang berhasil diunggah!';
+    notificationStore.success('Foto bidang berhasil diunggah');
     setTimeout(() => {
       deptUploadStatus.value = '';
     }, 2000);
   } catch (err) {
     deptUploadStatus.value = 'Gagal mengunggah foto bidang.';
+    notificationStore.error('Foto bidang gagal diunggah', 'Periksa koneksi dan format file.');
   } finally {
     isUploadingDeptPhoto.value = false;
     input.value = '';
@@ -118,13 +122,19 @@ async function saveDept() {
   };
 
   if (editingDept.value) {
-    contentStore.updateDepartment(editingDept.value.id, updates);
+    contentStore.updateDepartment(editingDept.value.id || editingDept.value.romanNumber, updates);
     // Asynchronously sync with Neon backend if connected
     try {
       await fetch('/api/admin/departments', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingDept.value.id, ...updates }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-auth': 'true',
+        },
+        body: JSON.stringify({
+          id: editingDept.value.id,
+          ...updates,
+        }),
       });
     } catch {
       // local store already updated
@@ -138,7 +148,10 @@ async function saveDept() {
     try {
       await fetch('/api/admin/departments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-auth': 'true',
+        },
         body: JSON.stringify({ ...updates, sortOrder: created.sortOrder, isVisible: true }),
       });
     } catch {
@@ -147,6 +160,7 @@ async function saveDept() {
   }
 
   showDeptModal.value = false;
+  notificationStore.success('Bidang pelayanan berhasil disimpan');
 }
 
 // Add/Edit Program Modal

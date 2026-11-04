@@ -33,6 +33,9 @@ function handleActivate() {
       endYear: endYear.value,
       isActive: true,
     };
+    try {
+      localStorage.setItem('talitakumi_activePeriod', JSON.stringify(contentStore.activePeriod));
+    } catch {}
 
     // 2. If BLANK strategy, clear names
     if (copyStrategy.value === 'BLANK') {
@@ -41,6 +44,9 @@ function handleActivate() {
         o.photoUrl = undefined;
         o.instagram = undefined;
       });
+      try {
+        localStorage.setItem('talitakumi_officers', JSON.stringify(contentStore.officers));
+      } catch {}
     }
 
     isSubmitting.value = false;

@@ -40,5 +40,37 @@
 
   /* Touch Target (WCAG 2.2 AA / v2.0 §9) */
   --touch-target: 44px;
+
+  /* Status Color Tokens (Design Spec §5) */
+  --status-success: #15803d;
+  --status-success-bg: #f0fdf4;
+  --status-success-border: #86efac;
+
+  --status-error: #b91c1c;
+  --status-error-bg: #fef2f2;
+  --status-error-border: #fca5a5;
+
+  --status-warning: #a16207;
+  --status-warning-bg: #fffbeb;
+  --status-warning-border: #fcd34d;
+
+  --status-info: #1d4ed8;
+  --status-info-bg: #eff6ff;
+  --status-info-border: #93c5fd;
+
+  --status-neutral: #475569;
+  --status-neutral-bg: #f8fafc;
+  --status-neutral-border: #cbd5e1;
+
+  /* Motion Tokens (Design Spec §6 & §28) */
+  --duration-instant: 80ms;
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+  --duration-moderate: 300ms;
+  --duration-slow: 420ms;
+
+  --motion-in: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-out: cubic-bezier(0.4, 0, 1, 1);
+  --motion-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 

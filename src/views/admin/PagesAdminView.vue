@@ -21,21 +21,32 @@ const historyMeaning = ref(contentStore.historyData.meaning);
 const youtubeUrl = ref(contentStore.historyData.youtubeUrl || '');
 
 function handleSave() {
-  // Update store
-  contentStore.settings.slogan = slogan.value.trim();
-  contentStore.settings.verse = verse.value.trim();
-  contentStore.settings.address = address.value.trim();
-  contentStore.settings.instagramHandle = instagram.value.trim();
-  contentStore.settings.instagramUrl = `https://instagram.com/${instagram.value.trim()}`;
+  // Update store & localStorage
+  contentStore.saveSettings({
+    slogan: slogan.value.trim(),
+    verse: verse.value.trim(),
+    address: address.value.trim(),
+    instagramHandle: instagram.value.trim(),
+    instagramUrl: `https://instagram.com/${instagram.value.trim()}`,
+  });
 
-  contentStore.homeData.hero.slogan = slogan.value.trim();
-  contentStore.homeData.hero.subSlogan = subSlogan.value.trim();
-  contentStore.homeData.hero.verse = verse.value.trim();
+  contentStore.saveHomeData({
+    ...contentStore.homeData,
+    hero: {
+      ...contentStore.homeData.hero,
+      slogan: slogan.value.trim(),
+      subSlogan: subSlogan.value.trim(),
+      verse: verse.value.trim(),
+    },
+  });
 
-  contentStore.historyData.title = historyTitle.value.trim();
-  contentStore.historyData.summary = historySummary.value.trim();
-  contentStore.historyData.meaning = historyMeaning.value.trim();
-  contentStore.historyData.youtubeUrl = youtubeUrl.value.trim();
+  contentStore.saveHistoryData({
+    ...contentStore.historyData,
+    title: historyTitle.value.trim(),
+    summary: historySummary.value.trim(),
+    meaning: historyMeaning.value.trim(),
+    youtubeUrl: youtubeUrl.value.trim(),
+  });
 
   isSaved.value = true;
   setTimeout(() => {
@@ -60,21 +71,12 @@ function handleSave() {
 
     <!-- TABS NAVIGATION -->
     <div class="tabs-nav card">
-      <button
-        type="button"
-        class="tab-btn"
-        :class="{ 'is-active': activeTab === 'home' }"
-        @click="activeTab = 'home'"
-      >
+      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'home' }" @click="activeTab = 'home'">
         <FileText :size="18" />
         <span>Halaman Beranda</span>
       </button>
-      <button
-        type="button"
-        class="tab-btn"
-        :class="{ 'is-active': activeTab === 'history' }"
-        @click="activeTab = 'history'"
-      >
+      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'history' }"
+        @click="activeTab = 'history'">
         <BookOpen :size="18" />
         <span>Halaman Sejarah</span>
       </button>
@@ -132,12 +134,7 @@ function handleSave() {
 
         <div class="form-group full-width">
           <label class="form-label">URL Embed Video Dokumentasi YouTube</label>
-          <input
-            v-model="youtubeUrl"
-            type="url"
-            placeholder="https://www.youtube.com/embed/..."
-            class="form-input"
-          />
+          <input v-model="youtubeUrl" type="url" placeholder="https://www.youtube.com/embed/..." class="form-input" />
         </div>
       </div>
     </section>
@@ -230,6 +227,7 @@ function handleSave() {
   .form-grid {
     grid-template-columns: 1fr 1fr;
   }
+
   .full-width {
     grid-column: span 2;
   }
@@ -254,4 +252,3 @@ function handleSave() {
   font-size: 0.95rem;
 }
 </style>
-

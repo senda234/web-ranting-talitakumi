@@ -81,10 +81,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         return sendError(res, 400, 'ID atau slug album wajib disertakan');
       }
 
-      // Cari berdasarkan id atau slug
-      const album = id
-        ? await prisma.album.findUnique({ where: { id } })
-        : await prisma.album.findUnique({ where: { slug } });
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      let album = null;
+      if (id && isUuid.test(id)) {
+        album = await prisma.album.findUnique({ where: { id } });
+      }
+      if (!album && slug) {
+        album = await prisma.album.findUnique({ where: { slug } });
+      }
+      if (!album && title) {
+        album = await prisma.album.findFirst({ where: { title: title.trim() } });
+      }
 
       if (!album) {
         return sendError(res, 404, 'Album tidak ditemukan');

@@ -14,9 +14,11 @@ const branchName = ref(settings.branchName);
 const subBranchName = ref(settings.subBranchName);
 
 function saveIdentity() {
-  contentStore.settings.organizationName = orgName.value.trim();
-  contentStore.settings.branchName = branchName.value.trim();
-  contentStore.settings.subBranchName = subBranchName.value.trim();
+  contentStore.saveSettings({
+    organizationName: orgName.value.trim(),
+    branchName: branchName.value.trim(),
+    subBranchName: subBranchName.value.trim(),
+  });
 
   isSaved.value = true;
   setTimeout(() => {

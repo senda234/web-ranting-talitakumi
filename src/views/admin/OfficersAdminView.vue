@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useContentStore } from '@/stores/content';
+import { useNotificationStore } from '@/stores/notifications';
 import {
   Sparkles,
   Edit2,
@@ -16,6 +17,7 @@ import type { Officer } from '@/types';
 import { uploadImageFile } from '@/utils/uploader';
 
 const contentStore = useContentStore();
+const notificationStore = useNotificationStore();
 const activePeriod = computed(() => contentStore.activePeriod);
 const officers = computed(() => contentStore.officers);
 const departments = computed(() => contentStore.visibleDepartments);
@@ -59,11 +61,13 @@ async function handlePhotoSelected(e: Event) {
     });
     formPhotoUrl.value = res.url;
     uploadStatus.value = 'Foto berhasil diunggah!';
+    notificationStore.success('Foto berhasil diunggah');
     setTimeout(() => {
       uploadStatus.value = '';
     }, 2000);
   } catch (err: any) {
     uploadStatus.value = 'Gagal mengunggah foto.';
+    notificationStore.error('Foto gagal diunggah', 'Periksa koneksi dan coba ulang.');
   } finally {
     isUploadingPhoto.value = false;
     input.value = '';
@@ -88,13 +92,25 @@ async function saveOfficer() {
   editingOfficer.value.instagram = updatedInstagram;
   editingOfficer.value.isVisible = updatedIsVisible;
 
+  // Sinkronisasi ke store & localStorage
+  contentStore.updateOfficer(editingOfficer.value.id || editingOfficer.value.positionKey, {
+    name: updatedName,
+    photoUrl: updatedPhotoUrl,
+    instagram: updatedInstagram,
+    isVisible: updatedIsVisible,
+  });
+
   // Sinkronisasi pembaruan ke Neon PostgreSQL
   try {
     await fetch('/api/admin/officers', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-auth': 'true',
+      },
       body: JSON.stringify({
         id: editingOfficer.value.id,
+        positionKey: editingOfficer.value.positionKey,
         name: updatedName,
         photoUrl: updatedPhotoUrl || null,
         instagram: updatedInstagram || null,
@@ -106,6 +122,7 @@ async function saveOfficer() {
   }
 
   editingOfficer.value = null;
+  notificationStore.success('Perubahan berhasil disimpan', `Data ${updatedName} telah diperbarui.`);
 }
 </script>
 
@@ -130,15 +147,8 @@ async function saveOfficer() {
       <section class="slots-group card">
         <h2 class="group-title">Pengurus Inti (5 Posisi Baku)</h2>
         <div class="slots-grid core-slots">
-          <div
-            v-for="off in officers.filter((o) => !o.departmentId)"
-            :key="off.id"
-            class="slot-card"
-            :class="{ 'is-hidden': !off.isVisible }"
-            @click="openEditModal(off)"
-            role="button"
-            tabindex="0"
-          >
+          <div v-for="off in officers.filter((o) => !o.departmentId)" :key="off.id" class="slot-card"
+            :class="{ 'is-hidden': !off.isVisible }" @click="openEditModal(off)" role="button" tabindex="0">
             <div class="slot-avatar">
               <img v-if="off.photoUrl" :src="off.photoUrl" :alt="off.name" />
               <div v-else class="initials">{{ off.name.charAt(0) }}</div>
@@ -161,26 +171,15 @@ async function saveOfficer() {
       <section class="slots-group card">
         <h2 class="group-title">Koordinator Lima Bidang (10 Posisi Baku)</h2>
         <div class="depts-slots-stack">
-          <div
-            v-for="dept in departments"
-            :key="dept.id"
-            class="dept-slot-row"
-          >
+          <div v-for="dept in departments" :key="dept.id" class="dept-slot-row">
             <div class="dept-label">
               <span class="dept-badge">{{ dept.romanNumber }}</span>
               <strong>Bidang {{ dept.romanNumber }} — {{ dept.name }}</strong>
             </div>
 
             <div class="dept-slots-grid">
-              <div
-                v-for="off in officers.filter((o) => o.departmentId === dept.id)"
-                :key="off.id"
-                class="slot-card"
-                :class="{ 'is-hidden': !off.isVisible }"
-                @click="openEditModal(off)"
-                role="button"
-                tabindex="0"
-              >
+              <div v-for="off in officers.filter((o) => o.departmentId === dept.id)" :key="off.id" class="slot-card"
+                :class="{ 'is-hidden': !off.isVisible }" @click="openEditModal(off)" role="button" tabindex="0">
                 <div class="slot-avatar small">
                   <img v-if="off.photoUrl" :src="off.photoUrl" :alt="off.name" />
                   <div v-else class="initials">{{ off.name.charAt(0) }}</div>
@@ -225,41 +224,22 @@ async function saveOfficer() {
             <label class="form-label">Foto Pengurus</label>
             <div class="photo-upload-box">
               <div class="officer-preview-avatar">
-                <img
-                  v-if="formPhotoUrl"
-                  :src="formPhotoUrl"
-                  :alt="formName"
-                  class="preview-img"
-                />
+                <img v-if="formPhotoUrl" :src="formPhotoUrl" :alt="formName" class="preview-img" />
                 <div v-else class="initials-placeholder">
                   {{ formName ? formName.charAt(0) : '?' }}
                 </div>
               </div>
 
               <div class="upload-controls">
-                <input
-                  ref="fileInputRef"
-                  type="file"
-                  accept="image/*"
-                  class="hidden-file-input"
-                  @change="handlePhotoSelected"
-                />
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline"
-                  :disabled="isUploadingPhoto"
-                  @click="triggerPhotoSelect"
-                >
+                <input ref="fileInputRef" type="file" accept="image/*" class="hidden-file-input"
+                  @change="handlePhotoSelected" />
+                <button type="button" class="btn btn-sm btn-outline" :disabled="isUploadingPhoto"
+                  @click="triggerPhotoSelect">
                   <UploadCloud :size="16" />
                   <span>{{ isUploadingPhoto ? 'Mengunggah...' : (formPhotoUrl ? 'Ganti Foto' : 'Unggah Foto') }}</span>
                 </button>
-                <button
-                  v-if="formPhotoUrl"
-                  type="button"
-                  class="btn btn-sm btn-ghost text-danger"
-                  @click="removePhoto"
-                  title="Hapus foto"
-                >
+                <button v-if="formPhotoUrl" type="button" class="btn btn-sm btn-ghost text-danger" @click="removePhoto"
+                  title="Hapus foto">
                   <Trash2 :size="15" />
                   <span>Hapus Foto</span>
                 </button>
@@ -277,12 +257,7 @@ async function saveOfficer() {
             <label class="form-label">Akun Instagram (Opsional)</label>
             <div class="ig-input-wrap">
               <span class="ig-prefix">@</span>
-              <input
-                v-model="formInstagram"
-                type="text"
-                placeholder="username"
-                class="form-input ig-field"
-              />
+              <input v-model="formInstagram" type="text" placeholder="username" class="form-input ig-field" />
             </div>
             <span class="field-hint">Hanya diisi bila pengurus setuju akun ditampilkan ke publik.</span>
           </div>
@@ -698,4 +673,3 @@ async function saveOfficer() {
   background: #fef2f2 !important;
 }
 </style>
-

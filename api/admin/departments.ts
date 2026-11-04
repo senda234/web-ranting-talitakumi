@@ -52,12 +52,33 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const body = await parseJsonBody(req);
       const { id, romanNumber, name, shortName, description, imageUrl, sortOrder, isVisible } = body;
 
-      if (!id) {
-        return sendError(res, 400, 'ID bidang wajib disertakan');
+      if (!id && !romanNumber && !name) {
+        return sendError(res, 400, 'ID, nomor romawi, atau nama bidang wajib disertakan');
+      }
+
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      let existingDept = null;
+
+      if (id && isUuid.test(id)) {
+        existingDept = await prisma.department.findUnique({ where: { id } });
+      }
+      if (!existingDept && romanNumber) {
+        existingDept = await prisma.department.findFirst({
+          where: { romanNumber: romanNumber.trim().toUpperCase() },
+        });
+      }
+      if (!existingDept && name) {
+        existingDept = await prisma.department.findFirst({
+          where: { name: name.trim() },
+        });
+      }
+
+      if (!existingDept) {
+        return sendError(res, 404, 'Data bidang tidak ditemukan di database Neon');
       }
 
       const updated = await prisma.department.update({
-        where: { id },
+        where: { id: existingDept.id },
         data: {
           ...(romanNumber && { romanNumber: romanNumber.trim().toUpperCase() }),
           ...(name && { name: name.trim() }),

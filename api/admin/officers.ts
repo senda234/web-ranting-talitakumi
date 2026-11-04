@@ -27,14 +27,31 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (method === 'PATCH') {
       const body = await parseJsonBody(req);
-      const { id, name, title, photoUrl, instagram, isVisible, departmentId } = body;
+      const { id, positionKey, name, title, photoUrl, instagram, isVisible, departmentId } = body;
 
-      if (!id) {
-        return sendError(res, 400, 'ID pengurus wajib disertakan');
+      if (!id && !positionKey && !name) {
+        return sendError(res, 400, 'ID atau positionKey pengurus wajib disertakan');
+      }
+
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      let existingOfficer = null;
+
+      if (id && isUuid.test(id)) {
+        existingOfficer = await prisma.officer.findUnique({ where: { id } });
+      }
+      if (!existingOfficer && positionKey) {
+        existingOfficer = await prisma.officer.findFirst({ where: { positionKey } });
+      }
+      if (!existingOfficer && name) {
+        existingOfficer = await prisma.officer.findFirst({ where: { name: name.trim() } });
+      }
+
+      if (!existingOfficer) {
+        return sendError(res, 404, 'Data pengurus tidak ditemukan di database Neon');
       }
 
       const updated = await prisma.officer.update({
-        where: { id },
+        where: { id: existingOfficer.id },
         data: {
           ...(name !== undefined && { name: name.trim() }),
           ...(title !== undefined && { title: title.trim() }),
@@ -45,16 +62,20 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         },
       });
 
-      // Catat log aktivitas
-      await prisma.activityLog.create({
-        data: {
-          userId: session.userId,
-          action: 'UPDATE_OFFICER',
-          entityType: 'Officer',
-          entityId: id,
-          summary: `Memperbarui data pengurus: ${updated.name} (${updated.title})`,
-        },
-      });
+      // Catat log aktivitas jika user session ada
+      try {
+        await prisma.activityLog.create({
+          data: {
+            userId: session.userId,
+            action: 'UPDATE_OFFICER',
+            entityType: 'Officer',
+            entityId: existingOfficer.id,
+            summary: `Memperbarui data pengurus: ${updated.name} (${updated.title})`,
+          },
+        });
+      } catch {
+        // Non-blocking log
+      }
 
       return sendSuccess(res, updated, 'Data pengurus berhasil diperbarui');
     }

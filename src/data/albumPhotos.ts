@@ -166,7 +166,7 @@ export function getAlbumPhotos(slug: string): ArchivePhotoItem[] {
     const mapKey = `foto/${folder}/${filename}`;
     const url =
       cloudinaryMap[mapKey] ||
-      `/foto/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
+      `https://res.cloudinary.com/ovukwake/image/upload/talitakumi/albums/${encodeURIComponent(slug)}/${encodeURIComponent(filename)}`;
 
     return {
       id: `${slug}-${index}`,

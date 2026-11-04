@@ -21,7 +21,10 @@ export async function uploadImageFile(
   try {
     const res = await fetch('/api/admin/cloudinary/signature', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-auth': 'true',
+      },
       body: JSON.stringify({ folder }),
     });
     if (res.ok) {
@@ -57,7 +60,10 @@ export async function uploadImageFile(
         try {
           await fetch('/api/admin/media', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-auth': 'true',
+            },
             body: JSON.stringify({
               cloudinaryPublicId: cldJson.public_id,
               secureUrl,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useContentStore } from '@/stores/content';
+import { useNotificationStore } from '@/stores/notifications';
 import {
   Plus,
   Images,
@@ -17,6 +18,7 @@ import type { Album } from '@/types';
 import type { ArchivePhotoItem } from '@/data/albumPhotos';
 
 const contentStore = useContentStore();
+const notificationStore = useNotificationStore();
 const albums = computed(() => contentStore.albums);
 
 const selectedAlbum = ref<Album | null>(albums.value[0] || null);
@@ -71,7 +73,10 @@ async function saveAlbumEdit() {
   try {
     await fetch('/api/admin/albums', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-auth': 'true',
+      },
       body: JSON.stringify({
         id: selectedAlbum.value.id,
         slug: selectedAlbum.value.slug,
@@ -85,6 +90,7 @@ async function saveAlbumEdit() {
   } finally {
     isSavingAlbum.value = false;
     showEditAlbumModal.value = false;
+    notificationStore.success('Album berhasil diperbarui');
   }
 }
 
@@ -129,6 +135,24 @@ function togglePublish(album: Album) {
 function setAsCover(photoUrl: string) {
   if (selectedAlbum.value) {
     selectedAlbum.value.coverUrl = photoUrl;
+    contentStore.updateAlbum(selectedAlbum.value.id || selectedAlbum.value.slug, {
+      coverUrl: photoUrl,
+    });
+    notificationStore.success('Foto sampul berhasil diperbarui');
+    try {
+      fetch('/api/admin/albums', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-auth': 'true',
+        },
+        body: JSON.stringify({
+          id: selectedAlbum.value.id,
+          slug: selectedAlbum.value.slug,
+          coverUrl: photoUrl,
+        }),
+      }).catch(() => {});
+    } catch {}
   }
 }
 
@@ -152,7 +176,10 @@ async function handleFileUpload(e: Event) {
     try {
       const sigRes = await fetch('/api/admin/cloudinary/signature', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-auth': 'true',
+        },
         body: JSON.stringify({ folder: `talitakumi/albums/${selectedAlbum.value.slug}` }),
       });
       if (sigRes.ok) {
@@ -201,7 +228,10 @@ async function handleFileUpload(e: Event) {
             uploadNotice.value = `Menyimpan path ${file.name} ke database Neon...`;
             await fetch('/api/admin/media', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-auth': 'true',
+              },
               body: JSON.stringify({
                 cloudinaryPublicId,
                 secureUrl: photoUrl,
@@ -221,7 +251,7 @@ async function handleFileUpload(e: Event) {
         }
       }
 
-      // Tambahkan ke state frontend
+      // Tambahkan ke state frontend & store / localStorage
       const newPhoto: ArchivePhotoItem = {
         id: `photo-${Date.now()}-${completed}`,
         albumSlug: selectedAlbum.value.slug,
@@ -231,9 +261,10 @@ async function handleFileUpload(e: Event) {
         altText: `Foto kegiatan ${selectedAlbum.value.title}`,
       };
       albumPhotos.value.unshift(newPhoto);
+      contentStore.addAlbumPhoto(selectedAlbum.value.slug, newPhoto);
 
       if (!selectedAlbum.value.coverUrl) {
-        selectedAlbum.value.coverUrl = photoUrl;
+        setAsCover(photoUrl);
       }
 
       completed++;
@@ -242,6 +273,7 @@ async function handleFileUpload(e: Event) {
 
     selectedAlbum.value.photoCount = albumPhotos.value.length;
     uploadNotice.value = 'Upload selesai!';
+    notificationStore.success('Upload selesai', `${completed} foto berhasil ditambahkan ke album.`);
     setTimeout(() => {
       uploadNotice.value = '';
     }, 2000);
