@@ -107,6 +107,16 @@ export const useContentStore = defineStore('content', () => {
     }
   }
 
+  function updateAlbum(idOrSlug: string, updates: Partial<Album>) {
+    const idx = albums.value.findIndex((a) => a.id === idOrSlug || a.slug === idOrSlug);
+    if (idx !== -1) {
+      albums.value[idx] = {
+        ...albums.value[idx],
+        ...updates,
+      };
+    }
+  }
+
   return {
     settings,
     activePeriod,
@@ -126,6 +136,7 @@ export const useContentStore = defineStore('content', () => {
     getAlbumBySlug,
     addDepartment,
     updateDepartment,
+    updateAlbum,
   };
 });
 

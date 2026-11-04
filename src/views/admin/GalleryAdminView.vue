@@ -11,6 +11,7 @@ import {
   Star,
   X,
   FileImage,
+  Edit2,
 } from 'lucide-vue-next';
 import type { Album } from '@/types';
 import type { ArchivePhotoItem } from '@/data/albumPhotos';
@@ -30,6 +31,61 @@ function selectAlbum(album: Album) {
 // Initialize with first album
 if (selectedAlbum.value) {
   selectAlbum(selectedAlbum.value);
+}
+
+// Edit Album Modal State
+const showEditAlbumModal = ref(false);
+const editTitle = ref('');
+const editCategory = ref<'BIDANG' | 'KEGIATAN_KHUSUS'>('BIDANG');
+const editDescription = ref('');
+const isSavingAlbum = ref(false);
+
+function openEditAlbumModal() {
+  if (!selectedAlbum.value) return;
+  editTitle.value = selectedAlbum.value.title;
+  editCategory.value = selectedAlbum.value.category;
+  editDescription.value = selectedAlbum.value.description || '';
+  showEditAlbumModal.value = true;
+}
+
+async function saveAlbumEdit() {
+  if (!selectedAlbum.value || !editTitle.value.trim()) return;
+
+  isSavingAlbum.value = true;
+  const newTitle = editTitle.value.trim();
+  const newCategory = editCategory.value;
+  const newDesc = editDescription.value.trim();
+
+  // 1. Perbarui state lokal Pinia
+  selectedAlbum.value.title = newTitle;
+  selectedAlbum.value.category = newCategory;
+  selectedAlbum.value.description = newDesc;
+
+  contentStore.updateAlbum(selectedAlbum.value.id, {
+    title: newTitle,
+    category: newCategory,
+    description: newDesc,
+  });
+
+  // 2. Simpan ke database Neon PostgreSQL
+  try {
+    await fetch('/api/admin/albums', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: selectedAlbum.value.id,
+        slug: selectedAlbum.value.slug,
+        title: newTitle,
+        category: newCategory,
+        description: newDesc,
+      }),
+    });
+  } catch (err) {
+    console.warn('Gagal sinkronisasi pembaruan album ke Neon:', err);
+  } finally {
+    isSavingAlbum.value = false;
+    showEditAlbumModal.value = false;
+  }
 }
 
 // Album creation modal
@@ -248,14 +304,34 @@ async function handleFileUpload(e: Event) {
       <section v-if="selectedAlbum" class="album-editor card">
         <div class="editor-header">
           <div class="header-left">
-            <span class="badge" :class="selectedAlbum.category === 'BIDANG' ? 'badge-teal' : 'badge-gold'">
-              {{ selectedAlbum.category === 'BIDANG' ? 'Bidang Pelayanan' : 'Kegiatan Khusus' }}
-            </span>
+            <div class="album-badge-row">
+              <span class="badge" :class="selectedAlbum.category === 'BIDANG' ? 'badge-teal' : 'badge-gold'">
+                {{ selectedAlbum.category === 'BIDANG' ? 'Bidang Pelayanan' : 'Kegiatan Khusus' }}
+              </span>
+              <button
+                type="button"
+                class="btn btn-sm btn-ghost edit-title-btn"
+                @click="openEditAlbumModal"
+                title="Ubah nama dan deskripsi album"
+              >
+                <Edit2 :size="14" />
+                <span>Ubah Nama Album</span>
+              </button>
+            </div>
             <h2 class="selected-title">{{ selectedAlbum.title }}</h2>
             <p v-if="selectedAlbum.description" class="selected-desc">{{ selectedAlbum.description }}</p>
           </div>
 
           <div class="header-actions">
+            <button
+              type="button"
+              class="btn btn-outline"
+              @click="openEditAlbumModal"
+              title="Sunting judul dan rincian album"
+            >
+              <Edit2 :size="16" />
+              <span>Edit Info</span>
+            </button>
             <button
               type="button"
               class="btn"
@@ -377,6 +453,67 @@ async function handleFileUpload(e: Event) {
             </button>
             <button type="button" class="btn btn-primary" @click="createNewAlbum">
               Simpan Album
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT ALBUM MODAL -->
+    <div v-if="showEditAlbumModal && selectedAlbum" class="modal-backdrop" @click.self="showEditAlbumModal = false">
+      <div class="modal-card card">
+        <div class="modal-head">
+          <div>
+            <span class="badge badge-teal">Galeri & Album</span>
+            <h2>Ubah Nama & Info Album</h2>
+          </div>
+          <button type="button" class="close-modal-btn" @click="showEditAlbumModal = false">
+            <X :size="20" />
+          </button>
+        </div>
+
+        <div class="modal-form">
+          <div class="form-group">
+            <label class="form-label">Nama Galeri / Judul Album</label>
+            <input
+              v-model="editTitle"
+              type="text"
+              placeholder="Contoh: Bidang I — Organisasi"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Kategori Album</label>
+            <select v-model="editCategory" class="form-input">
+              <option value="BIDANG">Bidang Pelayanan</option>
+              <option value="KEGIATAN_KHUSUS">Kegiatan Khusus / Partisipasi / Acara</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Deskripsi Singkat</label>
+            <textarea
+              v-model="editDescription"
+              rows="3"
+              placeholder="Keterangan singkat mengenai dokumentasi album..."
+              class="form-input form-textarea"
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" @click="showEditAlbumModal = false">
+              Batal
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="isSavingAlbum"
+              @click="saveAlbumEdit"
+            >
+              <Check :size="16" />
+              <span>{{ isSavingAlbum ? 'Menyimpan...' : 'Simpan Perubahan' }}</span>
             </button>
           </div>
         </div>
@@ -795,6 +932,29 @@ async function handleFileUpload(e: Event) {
   justify-content: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-2);
+}
+
+.album-badge-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.edit-title-btn {
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  min-height: 28px;
+  color: var(--teal);
+}
+
+.edit-title-btn:hover {
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 75px;
 }
 </style>
 
