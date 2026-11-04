@@ -15,11 +15,8 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
   <div class="home-view">
     <!-- BLOK 1: HERO (Dark overlay, 2 Action Buttons, Verse) -->
     <section class="hero-block">
-      <div
-        class="hero-bg"
-        :style="{ backgroundImage: `url(${hero.featuredPhotoUrl || '/foto/backround.jpg'})` }"
-        aria-hidden="true"
-      ></div>
+        :style="{ backgroundImage: `url(${hero.featuredPhotoUrl || 'https://res.cloudinary.com/ovukwake/image/upload/v1793782880/talitakumi/site/hero/h54m3gkqrnzcr1yg7bk5.avif'})` }"
+        aria-hidden="true"></div>
       <div class="hero-overlay" aria-hidden="true"></div>
 
       <div class="container hero-content">
@@ -61,11 +58,7 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
         <div class="leaders-grid">
           <article v-if="leaders.ketua" class="leader-card">
             <div class="leader-avatar">
-              <img
-                :src="leaders.ketua.photoUrl"
-                :alt="`Foto ${leaders.ketua.name}`"
-                loading="lazy"
-              />
+              <img :src="leaders.ketua.photoUrl" :alt="`Foto ${leaders.ketua.name}`" loading="lazy" />
             </div>
             <div class="leader-details">
               <span class="role-tag">{{ leaders.ketua.title }}</span>
@@ -75,11 +68,7 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
 
           <article v-if="leaders.sekretaris" class="leader-card">
             <div class="leader-avatar">
-              <img
-                :src="leaders.sekretaris.photoUrl"
-                :alt="`Foto ${leaders.sekretaris.name}`"
-                loading="lazy"
-              />
+              <img :src="leaders.sekretaris.photoUrl" :alt="`Foto ${leaders.sekretaris.name}`" loading="lazy" />
             </div>
             <div class="leader-details">
               <span class="role-tag">{{ leaders.sekretaris.title }}</span>
@@ -108,20 +97,10 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
         </div>
 
         <div class="departments-grid">
-          <RouterLink
-            v-for="dept in departments"
-            :key="dept.id"
-            to="/program"
-            class="dept-card"
-          >
+          <RouterLink v-for="dept in departments" :key="dept.id" to="/program" class="dept-card">
             <div class="dept-card-media">
-              <img
-                v-if="dept.imageUrl"
-                :src="dept.imageUrl"
-                :alt="`Bidang ${dept.romanNumber} - ${dept.name}`"
-                class="dept-card-img"
-                loading="lazy"
-              />
+              <img v-if="dept.imageUrl" :src="dept.imageUrl" :alt="`Bidang ${dept.romanNumber} - ${dept.name}`"
+                class="dept-card-img" loading="lazy" />
               <div v-else class="dept-card-placeholder">
                 <span class="dept-placeholder-roman">{{ dept.romanNumber }}</span>
               </div>
@@ -155,16 +134,8 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
         </div>
 
         <div class="recent-grid">
-          <div
-            v-for="photo in recentPhotos"
-            :key="photo.id"
-            class="photo-card"
-          >
-            <img
-              :src="photo.url"
-              :alt="photo.caption || photo.originalFilename"
-              loading="lazy"
-            />
+          <div v-for="photo in recentPhotos" :key="photo.id" class="photo-card">
+            <img :src="photo.url" :alt="photo.caption || photo.originalFilename" loading="lazy" />
             <div class="photo-caption">{{ photo.caption }}</div>
           </div>
         </div>
@@ -209,12 +180,10 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(8, 28, 102, 0.92) 0%,
-    rgba(8, 28, 102, 0.78) 50%,
-    rgba(5, 19, 71, 0.95) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(8, 28, 102, 0.92) 0%,
+      rgba(8, 28, 102, 0.78) 50%,
+      rgba(5, 19, 71, 0.95) 100%);
 }
 
 .hero-content {
@@ -546,4 +515,3 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
   text-overflow: ellipsis;
 }
 </style>
-

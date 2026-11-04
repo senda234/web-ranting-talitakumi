@@ -1,3 +1,7 @@
+import cloudinaryMapRaw from './cloudinaryMap.json';
+
+const cloudinaryMap = cloudinaryMapRaw as Record<string, string>;
+
 export interface ArchivePhotoItem {
   id: string;
   albumSlug: string;
@@ -158,12 +162,19 @@ export function getAlbumPhotos(slug: string): ArchivePhotoItem[] {
   const files = rawArchiveData[slug] || [];
   const folder = folderMap[slug] || slug;
 
-  return files.map((filename, index) => ({
-    id: `${slug}-${index}`,
-    albumSlug: slug,
-    filename,
-    originalFilename: filename,
-    url: `/foto/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`,
-    altText: `Dokumentasi ${folder} - Foto ${index + 1}`,
-  }));
+  return files.map((filename, index) => {
+    const mapKey = `foto/${folder}/${filename}`;
+    const url =
+      cloudinaryMap[mapKey] ||
+      `/foto/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
+
+    return {
+      id: `${slug}-${index}`,
+      albumSlug: slug,
+      filename,
+      originalFilename: filename,
+      url,
+      altText: `Dokumentasi ${folder} - Foto ${index + 1}`,
+    };
+  });
 }
