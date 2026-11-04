@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-ssr
+.vite
+package-lock.json
+public/foto
+

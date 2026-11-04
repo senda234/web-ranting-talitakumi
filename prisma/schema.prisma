@@ -1,0 +1,270 @@
+// Prisma schema for Web Ranting Talitakumi
+// Designed for Neon PostgreSQL + Vercel Functions (v2.0 Refined)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  SUPER_ADMIN
+  EDITOR
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AlbumCategory {
+  BIDANG
+  KEGIATAN_KHUSUS
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @db.VarChar(100)
+  email        String        @unique @db.VarChar(191)
+  passwordHash String        @map("password_hash")
+  role         Role          @default(EDITOR)
+  isActive     Boolean       @default(true) @map("is_active")
+  lastLoginAt  DateTime?     @map("last_login_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  mediaAssets  MediaAsset[]
+  activityLogs ActivityLog[]
+
+  @@map("users")
+}
+
+model SiteSetting {
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationName String   @default("Angkatan Muda Gereja Protestan Maluku") @map("organization_name")
+  branchName       String   @default("Cabang Pniel") @map("branch_name")
+  subBranchName    String   @default("Ranting Talitakumi") @map("sub_branch_name")
+  slogan           String   @default("Talita Kum, Hai Anak Muda Bangkitlah")
+  verse            String   @default("Markus 5:41")
+  address          String   @default("Jln. Listrik Negara Batu Gajah Atas, Ambon")
+  instagramUrl     String   @default("https://instagram.com/ranting.talitakumi") @map("instagram_url")
+  instagramHandle  String   @default("ranting.talitakumi") @map("instagram_handle")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model LeadershipPeriod {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(100)
+  startYear Int       @map("start_year")
+  endYear   Int       @map("end_year")
+  isActive  Boolean   @default(false) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  officers  Officer[]
+  programs  Program[]
+
+  @@map("leadership_periods")
+}
+
+model Department {
+  id          String    @id @default(uuid()) @db.Uuid
+  romanNumber String    @map("roman_number") @db.VarChar(10)
+  name        String    @db.VarChar(150)
+  shortName   String    @map("short_name") @db.VarChar(20)
+  description String    @db.Text
+  imageUrl    String?   @map("image_url") @db.Text
+  sortOrder   Int       @default(0) @map("sort_order")
+  isVisible   Boolean   @default(true) @map("is_visible")
+
+  officers    Officer[]
+  programs    Program[]
+  albums      Album[]
+
+  @@map("departments")
+}
+
+model Officer {
+  id           String           @id @default(uuid()) @db.Uuid
+  name         String           @db.VarChar(150)
+  title        String           @db.VarChar(100)
+  positionKey  String           @map("position_key") @db.VarChar(50)
+  departmentId String?          @map("department_id") @db.Uuid
+  periodId     String           @map("period_id") @db.Uuid
+  photoUrl     String?          @map("photo_url") @db.Text
+  instagram    String?          @db.VarChar(100)
+  sortOrder    Int              @default(0) @map("sort_order")
+  isVisible    Boolean          @default(true) @map("is_visible")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  department   Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  period       LeadershipPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@index([periodId])
+  @@index([departmentId])
+  @@map("officers")
+}
+
+model Program {
+  id           String              @id @default(uuid()) @db.Uuid
+  departmentId String              @map("department_id") @db.Uuid
+  periodId     String              @map("period_id") @db.Uuid
+  name         String              @db.VarChar(200)
+  summary      String?             @db.Text
+  sortOrder    Int                 @default(0) @map("sort_order")
+  isVisible    Boolean             @default(true) @map("is_visible")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  deletedAt    DateTime?           @map("deleted_at")
+
+  department   Department          @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  period       LeadershipPeriod    @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  activities   ProgramActivity[]
+
+  @@index([departmentId])
+  @@index([periodId])
+  @@map("programs")
+}
+
+model ProgramActivity {
+  id          String   @id @default(uuid()) @db.Uuid
+  programId   String   @map("program_id") @db.Uuid
+  name        String   @db.VarChar(250)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@map("program_activities")
+}
+
+model HistoryPage {
+  id         String        @id @default(uuid()) @db.Uuid
+  title      String        @db.VarChar(200)
+  summary    String        @db.Text
+  meaning    String        @db.Text
+  verse      String        @db.VarChar(50)
+  youtubeUrl String?       @map("youtube_url") @db.Text
+  status     ContentStatus @default(PUBLISHED)
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  @@map("history_pages")
+}
+
+model HistorySection {
+  id          String         @id @default(uuid()) @db.Uuid
+  periodLabel String         @map("period_label") @db.VarChar(100)
+  title       String         @db.VarChar(200)
+  content     String         @db.Text
+  sortOrder   Int            @default(0) @map("sort_order")
+  status      ContentStatus  @default(PUBLISHED)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  deletedAt   DateTime?      @map("deleted_at")
+
+  timelineItems TimelineItem[]
+
+  @@map("history_sections")
+}
+
+model TimelineItem {
+  id          String          @id @default(uuid()) @db.Uuid
+  yearLabel   String          @map("year_label") @db.VarChar(50)
+  title       String          @db.VarChar(150)
+  description String          @db.Text
+  sortOrder   Int             @default(0) @map("sort_order")
+  sectionId   String?         @map("section_id") @db.Uuid
+  isVisible   Boolean         @default(true) @map("is_visible")
+
+  section     HistorySection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@index([sectionId])
+  @@map("timeline_items")
+}
+
+model Album {
+  id           String        @id @default(uuid()) @db.Uuid
+  title        String        @db.VarChar(200)
+  slug         String        @unique @db.VarChar(200)
+  description  String?       @db.Text
+  category     AlbumCategory @default(BIDANG)
+  departmentId String?       @map("department_id") @db.Uuid
+  coverUrl     String?       @map("cover_url") @db.Text
+  sortOrder    Int           @default(0) @map("sort_order")
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?     @map("published_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  albumMedia   AlbumMedia[]
+
+  @@index([slug])
+  @@index([departmentId])
+  @@map("albums")
+}
+
+model MediaAsset {
+  id                 String       @id @default(uuid()) @db.Uuid
+  cloudinaryPublicId String?      @unique @map("cloudinary_public_id") @db.VarChar(255)
+  resourceType       String       @default("image") @map("resource_type") @db.VarChar(20)
+  secureUrl          String       @map("secure_url") @db.Text
+  originalFilename   String       @map("original_filename") @db.VarChar(255)
+  format             String?      @db.VarChar(20)
+  bytes              Int?
+  width              Int?
+  height             Int?
+  caption            String?      @db.Text
+  altText            String?      @map("alt_text") @db.VarChar(255)
+  uploadedById       String?      @map("uploaded_by_id") @db.Uuid
+  createdAt          DateTime     @default(now()) @map("created_at")
+  deletedAt          DateTime?    @map("deleted_at")
+
+  uploadedBy         User?        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  albumMedia         AlbumMedia[]
+
+  @@index([uploadedById])
+  @@map("media_assets")
+}
+
+model AlbumMedia {
+  albumId   String     @map("album_id") @db.Uuid
+  mediaId   String     @map("media_id") @db.Uuid
+  sortOrder Int        @default(0) @map("sort_order")
+
+  album     Album      @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  media     MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([albumId, mediaId])
+  @@index([albumId])
+  @@index([mediaId])
+  @@map("album_media")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id") @db.VarChar(100)
+  summary    String   @db.Text
+  ipAddress  String?  @map("ip_address") @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("activity_logs")
+}
+

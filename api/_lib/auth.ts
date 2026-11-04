@@ -1,0 +1,68 @@
+import type { IncomingMessage, ServerResponse } from 'http';
+import jwt from 'jsonwebtoken';
+
+const AUTH_SECRET = process.env.AUTH_SECRET || 'dev-talitakumi-secret-key-123456789';
+const COOKIE_NAME = 'talitakumi_session';
+
+export interface SessionPayload {
+  userId: string;
+  email: string;
+  role: 'SUPER_ADMIN' | 'EDITOR';
+  name: string;
+}
+
+export function signToken(payload: SessionPayload): string {
+  return jwt.sign(payload, AUTH_SECRET, { expiresIn: '7d' });
+}
+
+export function verifyToken(token: string): SessionPayload | null {
+  try {
+    return jwt.verify(token, AUTH_SECRET) as SessionPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function parseCookies(req: IncomingMessage): Record<string, string> {
+  const list: Record<string, string> = {};
+  const rc = req.headers.cookie;
+
+  if (rc) {
+    rc.split(';').forEach((cookie) => {
+      const parts = cookie.split('=');
+      const key = parts.shift()?.trim();
+      const val = decodeURIComponent(parts.join('='));
+      if (key) list[key] = val;
+    });
+  }
+
+  return list;
+}
+
+export function getSession(req: IncomingMessage): SessionPayload | null {
+  const cookies = parseCookies(req);
+  const token = cookies[COOKIE_NAME];
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+export function setSessionCookie(res: ServerResponse, token: string) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOptions = [
+    `${COOKIE_NAME}=${token}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=604800', // 7 days
+    ...(isProduction ? ['Secure'] : []),
+  ];
+  res.setHeader('Set-Cookie', cookieOptions.join('; '));
+}
+
+export function clearSessionCookie(res: ServerResponse) {
+  res.setHeader(
+    'Set-Cookie',
+    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+  );
+}
+
