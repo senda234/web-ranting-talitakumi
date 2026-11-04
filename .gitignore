@@ -61,3 +61,7 @@ $RECYCLE.BIN/
 # Testing & Coverage
 coverage/
 .nyc_output/
+
+# Camera RAW files (large unrenderable files)
+*.CR2
+*.cr2
