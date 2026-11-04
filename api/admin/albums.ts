@@ -122,3 +122,4 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 500, 'Operasi album gagal', err.message);
   }
 }
+
