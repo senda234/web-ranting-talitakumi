@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "prisma generate && vue-tsc -b && vite build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
