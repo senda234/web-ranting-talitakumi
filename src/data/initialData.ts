@@ -652,7 +652,7 @@ export const initialAlbums: Album[] = [
   },
   {
     id: 'alb-6',
-    title: 'SBC (Smart Bible Competition)',
+    title: 'SBC (Study Bible Camp )',
     slug: 'sbc',
     description: 'Dokumentasi kompetisi cerdas cermat Alkitab dan kebersamaan tim SBC.',
     category: 'KEGIATAN_KHUSUS',
@@ -702,7 +702,7 @@ export const initialHomeData: HomeData = {
       id: 'p-4',
       url: '/foto/SBC/IMG_20251018_190613.jpg',
       originalFilename: 'SBC Dokumentasi',
-      caption: 'Smart Bible Competition',
+      caption: 'Study Bible Camp ',
     },
   ],
 };

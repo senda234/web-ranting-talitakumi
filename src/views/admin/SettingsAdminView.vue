@@ -65,7 +65,7 @@ const logs = ref([
     action: 'Publikasi Album',
     user: 'admin@talitakumi.org',
     time: '4 Nov 2026',
-    details: 'Menerbitkan album SBC (Smart Bible Competition)',
+    details: 'Menerbitkan album SBC (Study Bible Camp )',
   },
 ]);
 </script>
@@ -81,28 +81,15 @@ const logs = ref([
 
     <!-- TABS -->
     <div class="tabs-nav card">
-      <button
-        type="button"
-        class="tab-btn"
-        :class="{ 'is-active': activeTab === 'identity' }"
-        @click="activeTab = 'identity'"
-      >
+      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'identity' }"
+        @click="activeTab = 'identity'">
         <span>Identitas Lembaga</span>
       </button>
-      <button
-        type="button"
-        class="tab-btn"
-        :class="{ 'is-active': activeTab === 'users' }"
-        @click="activeTab = 'users'"
-      >
+      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'users' }"
+        @click="activeTab = 'users'">
         <span>Pengguna & Hak Akses</span>
       </button>
-      <button
-        type="button"
-        class="tab-btn"
-        :class="{ 'is-active': activeTab === 'logs' }"
-        @click="activeTab = 'logs'"
-      >
+      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'logs' }" @click="activeTab = 'logs'">
         <span>Log Aktivitas</span>
       </button>
     </div>
@@ -292,6 +279,7 @@ const logs = ref([
   .form-grid {
     grid-template-columns: 1fr 1fr;
   }
+
   .full-width {
     grid-column: span 2;
   }
@@ -427,4 +415,3 @@ const logs = ref([
   color: var(--muted);
 }
 </style>
-

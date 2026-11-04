@@ -477,7 +477,7 @@ async function main() {
       sortOrder: 5,
     },
     {
-      title: 'SBC (Smart Bible Competition)',
+      title: 'SBC (Study Bible Camp )',
       slug: 'sbc',
       description: 'Dokumentasi kompetisi cerdas cermat Alkitab dan kebersamaan tim SBC.',
       category: AlbumCategory.KEGIATAN_KHUSUS,
