@@ -1,7 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import jwt from 'jsonwebtoken';
 
-const AUTH_SECRET = process.env.AUTH_SECRET || 'dev-talitakumi-secret-key-123456789';
+const AUTH_SECRET =
+  process.env.AUTH_SECRET ||
+  process.env.JWT_SECRET ||
+  'dev-talitakumi-secret-key-123456789';
 const COOKIE_NAME = 'talitakumi_session';
 
 export interface SessionPayload {
