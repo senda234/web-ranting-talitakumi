@@ -14,9 +14,9 @@ const recentPhotos = computed(() => contentStore.homeData.recentPhotos);
 <template>
   <div class="home-view">
     <!-- BLOK 1: HERO (Dark overlay, 2 Action Buttons, Verse) -->
-    <section class="hero-block">
-        :style="{ backgroundImage: `url(${hero.featuredPhotoUrl || 'https://res.cloudinary.com/ovukwake/image/upload/v1793782880/talitakumi/site/hero/h54m3gkqrnzcr1yg7bk5.avif'})` }"
-        aria-hidden="true"></div>
+    <section class="hero-block"
+      :style="{ backgroundImage: `url(${hero.featuredPhotoUrl || 'https://res.cloudinary.com/ovukwake/image/upload/v1793782880/talitakumi/site/hero/h54m3gkqrnzcr1yg7bk5.avif'})` }"
+      aria-hidden="true">
       <div class="hero-overlay" aria-hidden="true"></div>
 
       <div class="container hero-content">
