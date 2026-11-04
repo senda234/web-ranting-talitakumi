@@ -8,4 +8,7 @@ node_modules
 scripts/
 *.CR2
 *.cr2
+public/foto/Bidang*
+public/foto/SBC
+public/foto/Pniel Talent
 

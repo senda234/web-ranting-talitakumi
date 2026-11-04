@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "prisma generate && vue-tsc -b && vite build",
+    "postinstall": "prisma generate",
     "preview": "vite preview",
     "prisma:generate": "prisma generate",
     "migrate:media": "tsx scripts/migrate-to-cloudinary.ts"
@@ -20,10 +21,13 @@
   "homepage": "https://github.com/senda234/web-ranting-talitakumi#readme",
   "dependencies": {
     "@prisma/client": "^6.0.0",
+    "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
     "dotenv": "^16.4.7",
+    "jsonwebtoken": "^9.0.2",
     "lucide-vue-next": "^0.460.0",
     "pinia": "^2.3.0",
+    "prisma": "^6.0.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "zod": "^3.24.1"
@@ -33,9 +37,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.1",
     "@vitejs/plugin-vue": "^5.2.1",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "prisma": "^6.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
