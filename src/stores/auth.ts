@@ -8,15 +8,13 @@ export interface AuthUser {
   name: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR';
   permissions?: string[];
-  status: 'INVITED' | 'PENDING_GOOGLE_LINK' | 'PENDING_ACTIVATION' | 'ACTIVE' | 'DISABLED';
+  status: 'INVITED' | 'PENDING_ACTIVATION' | 'ACTIVE' | 'DISABLED';
 }
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null);
   const isLoading = ref(false);
   const isInitialized = ref(false);
-  const googleClientId = ref<string>('');
-  const isGoogleConfigured = ref(false);
 
   const isAuthenticated = computed(() => !!user.value);
   const isSuperAdmin = computed(() => user.value?.role === 'SUPER_ADMIN');
@@ -38,24 +36,9 @@ export const useAuthStore = defineStore('auth', () => {
     return userPerms.includes(pageKey);
   }
 
-  async function fetchGoogleConfig() {
-    try {
-      const res = await fetch('/api/auth/google-config');
-      if (res.ok) {
-        const data = await res.json();
-        const conf = data.data || data;
-        googleClientId.value = conf.clientId || '';
-        isGoogleConfigured.value = !!conf.clientId;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
   async function checkSession(): Promise<boolean> {
     isLoading.value = true;
     try {
-      await fetchGoogleConfig();
       const res = await fetch('/api/auth/me', {
         headers: { Accept: 'application/json' },
       });
@@ -80,75 +63,6 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('talitakumi_admin_auth');
       isInitialized.value = true;
       return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  async function loginWithGoogle(params: {
-    credential?: string;
-    code?: string;
-    redirectUri?: string;
-  }): Promise<{ success: boolean; message?: string }> {
-    isLoading.value = true;
-    try {
-      const res = await fetch('/api/auth/google-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && (data.success || data.user || data.data?.user)) {
-        user.value = data.data?.user || data.user;
-        localStorage.setItem('talitakumi_admin_auth', 'true');
-        return { success: true };
-      }
-
-      return {
-        success: false,
-        message: data.message || data.error || 'Login Google gagal. Pastikan email Anda sudah diundang.',
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        message: 'Gagal menghubungi server untuk autentikasi Google.',
-      };
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  async function activateWithGoogle(params: {
-    token: string;
-    credential?: string;
-    code?: string;
-    redirectUri?: string;
-  }): Promise<{ success: boolean; message?: string }> {
-    isLoading.value = true;
-    try {
-      const res = await fetch('/api/auth/google-activate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && (data.success || data.user || data.data?.user)) {
-        user.value = data.data?.user || data.user;
-        localStorage.setItem('talitakumi_admin_auth', 'true');
-        return { success: true, message: data.message };
-      }
-
-      return {
-        success: false,
-        message: data.message || data.error || 'Gagal mengaktifkan akun Google.',
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        message: 'Gagal menghubungi server untuk aktivasi Google.',
-      };
     } finally {
       isLoading.value = false;
     }
@@ -205,8 +119,6 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isLoading,
     isInitialized,
-    googleClientId,
-    isGoogleConfigured,
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
@@ -216,9 +128,6 @@ export const useAuthStore = defineStore('auth', () => {
     canAccessWizard,
     canInviteAdmins,
     hasPagePermission,
-    fetchGoogleConfig,
-    loginWithGoogle,
-    activateWithGoogle,
     checkSession,
     login,
     logout,

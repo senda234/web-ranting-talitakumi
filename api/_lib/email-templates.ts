@@ -54,11 +54,11 @@ export function templateInvitation(params: {
     `
     <h2>Halo, ${params.name}</h2>
     <p>Anda telah diundang oleh <strong>${params.invitedByName}</strong> untuk mengelola Web Ranting Talitakumi sebagai <span class="badge">${params.role}</span>.</p>
-    <p>Untuk mengaktifkan akun dan mengakses panel admin, silakan hubungkan akun Google Anda melalui tautan di bawah ini:</p>
+    <p>Untuk mengaktifkan akun dan mengakses panel admin, silakan buat kata sandi akun Anda melalui tautan di bawah ini:</p>
     <div style="text-align: center;">
-      <a href="${params.inviteUrl}" class="btn" target="_blank">Hubungkan Akun Google</a>
+      <a href="${params.inviteUrl}" class="btn" target="_blank">Aktivasi Akun Pengurus</a>
     </div>
-    <p style="font-size: 13px; color: #64748b;"><strong>Catatan Penting:</strong> Pastikan Anda masuk menggunakan akun Google dengan email <code>${params.email}</code>. Tautan undangan ini hanya berlaku selama 24 jam.</p>
+    <p style="font-size: 13px; color: #64748b;"><strong>Catatan Penting:</strong> Tautan undangan aktivasi ini berlaku selama 24 jam.</p>
     `
   );
   return { subject, html };
@@ -90,8 +90,8 @@ export function templateAccountActivated(params: {
     `
     <h2>Akun Berhasil Diaktifkan!</h2>
     <p>Halo <strong>${params.name}</strong>,</p>
-    <p>Akun Google Anda telah berhasil dihubungkan dan diaktifkan pada sistem panel admin Web Ranting Talitakumi.</p>
-    <p>Sekarang Anda dapat masuk kapan saja menggunakan tombol <strong>Masuk dengan Google</strong> pada portal pengurus.</p>
+    <p>Akun pengurus Anda telah berhasil diaktifkan pada sistem Web Ranting Talitakumi.</p>
+    <p>Sekarang Anda dapat masuk kapan saja menggunakan email dan kata sandi Anda pada portal pengurus.</p>
     `
   );
   return { subject, html };

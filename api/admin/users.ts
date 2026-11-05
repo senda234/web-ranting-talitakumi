@@ -211,7 +211,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             emailNormalized: normalizedEmail,
             role: targetRole,
             permissions: assignedPermissions,
-            authProvider: 'GOOGLE',
+            authProvider: 'LOCAL',
             status: 'PENDING_ACTIVATION',
             isActive: false,
             passwordHash: null,

@@ -11,8 +11,15 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 405, 'Metode tidak diizinkan');
   }
 
-  const url = new URL(req.url || '', 'http://localhost');
-  const resource = url.pathname.split('/').filter(Boolean).pop();
+  const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+  const queryResource = url.searchParams.get('resource');
+  const pathResource = url.pathname.split('/').filter(Boolean).pop();
+  const resource =
+    queryResource && queryResource !== '[resource]'
+      ? queryResource
+      : pathResource && pathResource !== '[resource]'
+      ? pathResource
+      : queryResource;
 
   try {
     // 1. ALBUMS

@@ -1,8 +1,20 @@
 {
   "rewrites": [
     {
-      "source": "/api/auth/callback/google",
-      "destination": "/api/auth/google-callback"
+      "source": "/api/auth/:action",
+      "destination": "/api/auth/[action]?action=:action"
+    },
+    {
+      "source": "/api/me/:resource",
+      "destination": "/api/me/[resource]?resource=:resource"
+    },
+    {
+      "source": "/api/public/:resource",
+      "destination": "/api/public/[resource]?resource=:resource"
+    },
+    {
+      "source": "/api/cloudinary/sign",
+      "destination": "/api/admin/cloudinary/signature"
     },
     {
       "source": "/((?!api).*)",

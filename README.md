@@ -7,7 +7,7 @@ Aplikasi web dinamis dan sistem Content Management System (CMS) resmi **AMGPM Ca
 ## 🚀 Tumpukan Teknologi (Tech Stack)
 
 - **Frontend:** Vue 3 (Composition API, `<script setup>`), Vite 5, TypeScript, Pinia, Vue Router 4, Lucide Icons
-- **Backend / API:** Node.js dalam Vercel Serverless Functions (`/api/*`)
+- **Backend / API:** Node.js dalam Vercel Serverless Functions (`/api/*`) – *Tepat 10 endpoint terkonsolidasi (kompatibel penuh dengan batas 12 Serverless Functions pada Vercel Hobby Plan)*
 - **Basis Data:** Neon PostgreSQL (Serverless Database dengan Connection Pooling) via Prisma ORM
 - **Media & Penyimpanan Gambar:** Cloudinary Signed Upload & CDN (100% media Cloudinary, tanpa penyimpanan lokal)
 - **Sistem Keamanan:** Sesi berbasis database Neon (SHA-256 token hash), Cookies `HttpOnly` + `Secure` + `SameSite=Lax`, Rate Limiting persisten di Neon, Bcrypt Password Hashing, Proteksi Super Admin Terakhir, Audit Log Keamanan
@@ -51,39 +51,40 @@ Palet warna dan tipografi terkunci di sistem untuk menjamin konsistensi visual:
 7. **Profil Saya (`/admin/profil`):** Pergantian kata sandi tanpa memerlukan kata sandi lama, serta pengaturan profil pengguna sesuai hierarki peran.
 8. **Pengaturan Sistem & Keamanan (`/admin/pengaturan`):**
    - **Tab 1: Identitas Lembaga:** Nama induk organisasi, nama cabang, dan nama ranting.
-   - **Tab 2: Pengguna & Hak Akses:** Undangan pengurus baru (tautan satu kali pakai 24 jam dengan email Google), rotasi peran (Super Admin, Admin, Editor), penonaktifan akun dengan alasan, dan pencabutan sesi paksa.
-   - **Tab 3: Matriks Izin Editor (Per Pengguna):** Pengaturan izin granular akses halaman per pengguna Editor (`gallery`, `officers`, `programs`, `pages`).
-   - **Tab 4: Audit & Dasbor Keamanan:** 5 kartu metrik keamanan real-time, manajemen sesi perangkat aktif akun sendiri, serta tabel jejak peristiwa keamanan (*Security Events*).
-9. **Aktivasi Akun Pengurus (`/admin/aktivasi`):** Halaman penautan akun Google dan aktivasi akun resmi bagi calon pengurus yang menerima undangan.
+   - **Tab 2: Pengguna & Hak Akses:** Undangan pengurus baru (tautan satu kali pakai 24 jam), modal edit terpadu (ganti peran "Jadikan Editor" atau "Admin", pengaturan izin halaman, ganti sandi tanpa sandi lama, lihat & salin tautan undangan jika belum aktif), penonaktifan akun dengan alasan, pencabutan sesi paksa, serta penghapusan akun permanen.
+   - **Tab 3: Audit & Dasbor Keamanan:** 5 kartu metrik keamanan real-time, manajemen sesi perangkat aktif akun sendiri, serta tabel jejak peristiwa keamanan (*Security Events*).
+9. **Aktivasi Akun Pengurus (`/admin/aktivasi`):** Halaman pembuatan kata sandi langsung bagi calon pengurus yang menerima tautan undangan resmi dari Super Admin.
 
 ---
 
-## 🛡️ Arsitektur Keamanan & Integrasi Google Sederhana
+## 🛡️ Arsitektur Keamanan & Pengelolaan Pengguna
 
-Sistem keamanan dirancang berlapis (*defense-in-depth*) dengan prinsip *Least Privilege* dan *Server Authoritative*:
+Sistem dirancang mandiri, aman, dan tanpa ketergantungan pihak ketiga yang rumit:
 
 1. **Akun Utama Super Admin Web:**
-   - Super Admin adalah akun web internal utama (`admin@talitakumi.org`) yang dibuat via seeder database dan tidak bergantung pada login Google.
-   - Super Admin memiliki otoritas penuh untuk mengelola pengguna, izin halaman, dan seluruh konten.
-2. **Validasi Email Terverifikasi Google Saat Menambah Pengguna:**
-   - Untuk mencegah pendaftaran akun dummy atau email acak/palsu, Super Admin hanya dapat mendaftarkan akun dengan format email Google resmi (`@gmail.com`).
-   - Saat pengguna masuk (*login*), sistem memverifikasi identitas pengguna menggunakan Google Sign-In. Pengguna luar yang belum didaftarkan oleh Super Admin akan ditolak secara otomatis.
-3. **Tiga Peran Pengurus & Matriks Izin Granular:**
-   - **Super Admin:** Otoritas tertinggi sistem, tidak tampil di tabel publik pengguna biasa.
+   - Super Admin adalah akun web internal utama (`admin@talitakumi.org`) yang dibuat via seeder database Neon.
+   - Super Admin memiliki otoritas penuh untuk mengelola pengguna, rotasi peran, izin halaman, dan seluruh konten.
+2. **Validasi Email Saat Menambah Pengguna:**
+   - Untuk mencegah pendaftaran akun palsu atau email acak, Super Admin wajib mendaftarkan alamat email resmi (`@gmail.com`).
+3. **Alur Aktivasi & Login Langsung (Tanpa Google OAuth):**
+   - **Tidak perlu konfigurasi Google OAuth** (tidak butuh Google Cloud Console, OAuth Client ID, OAuth Client Secret, maupun `GOOGLE_REDIRECT_URI`).
+   - Super Admin membuat pengguna di menu Pengaturan, dan sistem langsung menghasilkan **Tautan Aktivasi 24 jam**.
+   - Pengguna membuka tautan tersebut (`/admin/aktivasi?token=...`), membuat kata sandi baru (minimal 8 karakter), dan akun langsung aktif.
+   - Pengurus masuk (*login*) langsung menggunakan email dan kata sandi yang telah dibuat.
+4. **Tiga Peran Pengurus & Matriks Izin Granular:**
+   - **Super Admin:** Otoritas tertinggi sistem, tidak tampil di tabel publik pengguna biasa, dapat mengelola dan menghapus akun Admin/Editor.
    - **Admin:** Memiliki akses ke seluruh pengelolaan konten dan dapat mengatur profil Editor.
-   - **Editor:** Khusus mengelola modul konten tertentu sesuai matriks izin per pengguna (`gallery`, `officers`, `programs`, `pages`).
-4. **Sesi Berbasis Database Neon PostgreSQL:**
+   - **Editor:** Khusus mengelola modul konten tertentu sesuai centang izin halaman yang diatur Super Admin (`gallery`, `officers`, `programs`, `pages`).
+5. **Sesi Berbasis Database Neon PostgreSQL:**
    - Menggunakan token sesi yang tersimpan di tabel `sessions` Neon PostgreSQL dengan cookie `HttpOnly; Secure; SameSite=Lax`.
-   - Pengurus dapat melihat daftar perangkat aktif dan mencabut sesi kapan saja.
-   - Tidak menggunakan JWT stateless di sisi klien yang sulit dicabut.
-   - Token sesi disimpan di database hanya dalam bentuk hash SHA-256. Nilai mentah token dikirim ke peramban menggunakan cookie dengan atribut `HttpOnly; Secure; SameSite=Lax`.
-   - Pengurus dapat melihat daftar perangkat yang sedang aktif (IP address, jenis peramban, waktu aktif terakhir) dan mencabut sesi secara mandiri dari panel admin.
-5. **Proteksi Super Admin Terakhir (*Anti-Lockout Protection*):**
+   - Token sesi disimpan di database hanya dalam bentuk hash SHA-256.
+   - Pengurus dapat melihat daftar perangkat aktif (IP address, peramban, waktu aktif terakhir) dan mencabut sesi kapan saja.
+6. **Proteksi Super Admin Terakhir (*Anti-Lockout Protection*):**
    - Sistem secara otomatis menolak tindakan penghapusan, penurunan peran (*demote*), atau penonaktifan (*disable*) jika akun tersebut merupakan satu-satunya Super Admin aktif yang tersisa.
-6. **Rate Limiting Persisten di Database:**
+7. **Rate Limiting Persisten di Database:**
    - Pembatasan frekuensi percobaan login (maksimal 5 kali salah per 15 menit per IP/akun) untuk menahan serangan *brute force* dan *credential stuffing*.
-7. **Audit Trail & Security Events:**
-   - Setiap aksi penting (login Google, penautan akun, percobaan login gagal, aktivasi akun, rotasi peran, penonaktifan akun, pencabutan sesi, pengiriman email) dicatat secara terstruktur ke tabel `security_events`.
+8. **Audit Trail & Security Events:**
+   - Setiap aksi penting (login berhasil, percobaan login gagal, aktivasi akun, rotasi peran, penonaktifan akun, pencabutan sesi, penghapusan akun) dicatat secara terstruktur ke tabel `security_events`.
 
 ---
 
@@ -96,7 +97,43 @@ Sistem menerapkan pemisahan tanggung jawab yang bersih antara database dan aset 
    - Menyimpan URL aman Cloudinary pada field: `departments.image_url`, `officers.photo_url`, `albums.cover_url`, dan `media_assets.secure_url`.
 2. **Cloudinary (Penyimpanan Media & CDN):**
    - Berfungsi murni sebagai tempat penyimpanan berkas gambar fisik dan CDN performa tinggi.
-   - Pengunggahan berkas menggunakan metode **Signed Upload** melalui `/api/cloudinary/sign` sehingga API Secret Cloudinary tetap terlindungi di backend.
+   - Pengunggahan berkas menggunakan metode **Signed Upload** melalui `/api/admin/cloudinary/signature` sehingga API Secret Cloudinary tetap terlindungi di backend.
+
+---
+
+## ☁️ Panduan Deployment ke Vercel (Hobby Plan)
+
+### 1. Apakah Perlu `GOOGLE_REDIRECT_URI` di Vercel?
+> **Jawabannya: TIDAK PERLU.**
+> Sistem ini menggunakan autentikasi langsung berbasis email & kata sandi dengan sesi database Neon PostgreSQL. Seluruh kode mati Google OAuth 2.0 telah dibersihkan. Anda **tidak perlu** menyetel `GOOGLE_REDIRECT_URI`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, maupun `VITE_GOOGLE_CLIENT_ID` di Vercel.
+
+### 2. Variabel Environment yang Wajib Disetel di Vercel:
+Tambahkan variabel berikut pada menu **Project Settings > Environment Variables** di Vercel:
+
+| Nama Variabel | Nilai / Keterangan |
+|---|---|
+| `DATABASE_URL` | Connection string PostgreSQL ber-pool Neon (`...-pooler...sslmode=require`) |
+| `DATABASE_URL_UNPOOLED` | Connection string PostgreSQL langsung Neon (tanpa pooler) |
+| `AUTH_SECRET` | Kunci acak minimal 32 karakter untuk hash & keamanan sesi (contoh: string acak hex) |
+| `APP_URL` | Domain publik website Anda di Vercel (misal: `https://web-ranting-talitakumi.vercel.app`) |
+| `CLOUDINARY_CLOUD_NAME` | Cloud Name dari akun Cloudinary Anda |
+| `CLOUDINARY_API_KEY` | API Key Cloudinary Anda |
+| `CLOUDINARY_API_SECRET` | API Secret Cloudinary Anda |
+| `VITE_CLOUDINARY_CLOUD_NAME` | Cloud Name Cloudinary (untuk frontend upload widget) |
+
+### 3. Batas Serverless Function (Hobby Plan Limit)
+Vercel Hobby plan membatasi maksimal 12 Serverless Functions per deployment.
+Proyek ini mengonsolidasikan seluruh endpoint backend ke dalam **tepat 10 Serverless Functions**:
+1. `api/admin/albums.ts` (Kelola album galeri)
+2. `api/admin/departments.ts` (Kelola bidang pelayanan)
+3. `api/admin/media.ts` (Kelola aset media foto)
+4. `api/admin/officers.ts` (Kelola daftar pengurus & periode)
+5. `api/admin/users.ts` (Kelola user: list, create invite, update role/perms, revoke sessions, delete user)
+6. `api/admin/cloudinary/signature.ts` (Generate signature aman Cloudinary)
+7. `api/admin/security/stats.ts` (Metrik audit & security events)
+8. `api/auth/[action].ts` (Login, logout, me, verify invitation, activate, reset password)
+9. `api/me/[resource].ts` (Sesi aktif & profil akun pengurus sendiri)
+10. `api/public/[resource].ts` (Endpoint publik untuk beranda, pengurus, sejarah, galeri, program)
 
 ---
 
@@ -112,46 +149,35 @@ npm install
 ```
 
 ### 3. Konfigurasi Environment (`.env`)
-Salin berkas `.env.example` menjadi `.env` lalu lengkapi nilai variabel berikut:
-```env
-# Koneksi Database Neon PostgreSQL
-DATABASE_URL="postgresql://user:password@ep-sample-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-DATABASE_URL_UNPOOLED="postgresql://user:password@ep-sample.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-
-# Cloudinary CDN Storage
-CLOUDINARY_CLOUD_NAME="your_cloud_name"
-CLOUDINARY_API_KEY="your_api_key"
-CLOUDINARY_API_SECRET="your_api_secret"
-
-# URL Aplikasi
-APP_URL="http://localhost:5173"
-```
+Salin berkas `.env.example` menjadi `.env` lalu lengkapi nilai variabel database dan Cloudinary.
 
 ### 4. Sinkronisasi Skema Basis Data
 ```powershell
 # Buat Prisma Client terbaru
-npx.cmd prisma generate
+npx prisma generate
 
 # Sinkronkan skema ke database Neon
-npx.cmd prisma db push
+npx prisma db push
+
+# (Opsional) Jalankan seeder akun Super Admin dan data awal
+npm run db:seed
 ```
 
 ### 5. Menjalankan Aplikasi
 ```powershell
 # Jalankan server frontend Vite
-npm.cmd run dev
+npm run dev
 ```
 Buka peramban pada alamat: `http://localhost:5173`
 
 ### 6. Akses Panel Pengurus (Super Admin Utama)
 - **URL Masuk:** `http://localhost:5173/admin/login`
 - **Email:** `admin@talitakumi.org`
-- **Kata Sandi:** `admin123` *(Dapat diganti kapan saja melalui menu Profil Saya)*
-- **Pengguna Google:** Pengurus yang ditambahkan oleh Super Admin dapat masuk menggunakan tombol **Masuk dengan Google** menggunakan email `@gmail.com` yang telah didaftarkan.
+- **Kata Sandi:** `admin123` *(Dapat diganti kapan saja melalui menu Profil Saya atau di modal Pengaturan)*
 
 ### 7. Pengujian Build Produksi
 ```powershell
-npm.cmd run build
+npm run build
 ```
 Perintah di atas akan menjalankan secara berurutan: `prisma generate`, pemeriksaan tipe `vue-tsc -b`, dan kompilasi `vite build`.
 
@@ -164,17 +190,20 @@ Perintah di atas akan menjalankan secara berurutan: `prisma generate`, pemeriksa
 | `POST` | `/api/auth/login` | Publik | Masuk pengurus dengan rate limit & pembuatan sesi database |
 | `POST` | `/api/auth/logout` | Sesi Aktif | Keluar & pencabutan sesi database |
 | `GET` | `/api/auth/me` | Sesi Aktif | Mengambil informasi pengguna dari sesi saat ini |
-| `POST` | `/api/auth/activate` | Publik (Token) | Aktivasi akun baru & penetapan kata sandi ($\ge 12$ karakter) |
-| `GET` | `/api/admin/users` | Super Admin | Mengambil daftar pengurus, status, dan jumlah sesi aktif |
+| `GET` | `/api/auth/verify-invitation?token=...` | Publik (Token) | Memverifikasi validitas token undangan aktivasi |
+| `POST` | `/api/auth/activate` | Publik (Token) | Aktivasi akun baru & penetapan kata sandi ($\ge 8$ karakter) |
+| `POST` | `/api/auth/reset-password` | Publik (Token) | Reset kata sandi menggunakan token reset |
+| `GET` | `/api/admin/users` | Admin / Super Admin | Mengambil daftar pengurus, status, dan jumlah sesi aktif |
 | `POST` | `/api/admin/users` | Super Admin | Membuat akun undangan baru & menghasilkan URL aktivasi 24 jam |
-| `PATCH` | `/api/admin/users` | Super Admin | Mengubah peran atau menonaktifkan/mengaktifkan akun pengurus |
-| `DELETE` | `/api/admin/users?userId=...` | Super Admin | Mencabut paksa seluruh sesi aktif pengguna tertentu |
-| `GET` | `/api/admin/security/stats` | Super Admin | Metrik keamanan sistem, statistik sesi, dan 20 audit log terbaru |
+| `PATCH` | `/api/admin/users` | Super Admin | Mengubah peran, izin modul Editor, atau menonaktifkan akun |
+| `DELETE` | `/api/admin/users?id=...&action=delete_user` | Super Admin | Menghapus akun pengguna secara permanen |
+| `DELETE` | `/api/admin/users?userId=...&action=revoke_sessions` | Super Admin | Mencabut paksa seluruh sesi aktif pengguna tertentu |
+| `GET` | `/api/admin/security/stats` | Super Admin | Metrik keamanan sistem, statistik sesi, dan jejak peristiwa audit |
 | `GET` | `/api/me/sessions` | Sesi Aktif | Mengambil daftar sesi aktif milik akun sendiri |
 | `DELETE` | `/api/me/sessions?sessionId=...` | Sesi Aktif | Mencabut sesi perangkat tertentu |
 | `DELETE` | `/api/me/sessions?revokeOthers=true` | Sesi Aktif | Mencabut semua sesi perangkat lain kecuali sesi saat ini |
-| `POST` | `/api/cloudinary/sign` | Sesi Aktif | Menghasilkan tanda tangan upload aman untuk Cloudinary |
-| `GET`/`POST` | `/api/content/[type]` | Campuran | Pengambilan dan pembaruan konten dinamis website |
+| `POST` | `/api/admin/cloudinary/signature` | Sesi Aktif | Menghasilkan tanda tangan upload aman untuk Cloudinary |
+| `GET` | `/api/public/[resource]` | Publik | Mengambil data publik (profil, sejarah, pengurus, program, galeri) |
 
 ---
 

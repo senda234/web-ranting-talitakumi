@@ -19,7 +19,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
 
   const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
-  const resource = url.pathname.split('/').filter(Boolean).pop();
+  const queryResource = url.searchParams.get('resource');
+  const pathResource = url.pathname.split('/').filter(Boolean).pop();
+  const resource =
+    queryResource && queryResource !== '[resource]'
+      ? queryResource
+      : pathResource && pathResource !== '[resource]'
+      ? pathResource
+      : queryResource;
   const method = req.method;
   const { ip, userAgent } = getClientInfo(req);
 
