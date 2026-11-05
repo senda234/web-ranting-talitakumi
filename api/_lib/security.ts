@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import prisma from './prisma';
-import { parseCookies, setSessionCookie, clearSessionCookie, signToken, verifyToken, type SessionPayload } from './auth';
+import prisma from './prisma.js';
+import { parseCookies, setSessionCookie, clearSessionCookie, signToken, verifyToken, type SessionPayload } from './auth.js';
 
 const COOKIE_NAME = 'talitakumi_session';
 const SESSION_TTL_DAYS = 7;

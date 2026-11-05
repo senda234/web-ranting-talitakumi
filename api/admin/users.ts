@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import bcrypt from 'bcryptjs';
-import prisma from '../_lib/prisma';
-import { getSession } from '../_lib/auth';
-import { parseJsonBody } from '../_lib/body';
-import { sendSuccess, sendError } from '../_lib/response';
+import prisma from '../_lib/prisma.js';
+import { getSession } from '../_lib/auth.js';
+import { parseJsonBody } from '../_lib/body.js';
+import { sendSuccess, sendError } from '../_lib/response.js';
 import {
   setSecurityHeaders,
   getClientInfo,
@@ -13,12 +13,12 @@ import {
   revokeAllUserSessions,
   logSecurityEvent,
   sendSystemEmail,
-} from '../_lib/security';
+} from '../_lib/security.js';
 import {
   templateInvitation,
   templateRoleChanged,
   templateAccountDisabled,
-} from '../_lib/email-templates';
+} from '../_lib/email-templates.js';
 
 /**
  * Endpoint Pengelolaan Pengguna Admin & Undangan

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import prisma from './_lib/prisma';
-import { sendSuccess, sendError } from './_lib/response';
+import prisma from './_lib/prisma.js';
+import { sendSuccess, sendError } from './_lib/response.js';
 
 /**
  * Consolidated Public API Endpoint:

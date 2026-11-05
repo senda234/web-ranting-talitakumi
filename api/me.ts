@@ -1,10 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import bcrypt from 'bcryptjs';
-import prisma from './_lib/prisma';
-import { getSession } from './_lib/auth';
-import { parseJsonBody } from './_lib/body';
-import { sendSuccess, sendError } from './_lib/response';
-import { setSecurityHeaders, getClientInfo, logSecurityEvent, revokeSession } from './_lib/security';
+import prisma from './_lib/prisma.js';
+import { getSession } from './_lib/auth.js';
+import { parseJsonBody } from './_lib/body.js';
+import { sendSuccess, sendError } from './_lib/response.js';
+import { setSecurityHeaders, getClientInfo, logSecurityEvent, revokeSession } from './_lib/security.js';
 
 /**
  * Endpoint Terpadu Pengguna Sendiri (/api/me/profile & /api/me/sessions)

@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import crypto from 'crypto';
-import { getSession } from '../../_lib/auth';
-import { parseJsonBody } from '../../_lib/body';
-import { sendSuccess, sendError } from '../../_lib/response';
+import { getSession } from '../../_lib/auth.js';
+import { parseJsonBody } from '../../_lib/body.js';
+import { sendSuccess, sendError } from '../../_lib/response.js';
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'POST') {

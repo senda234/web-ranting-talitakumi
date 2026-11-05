@@ -54,7 +54,7 @@ export async function getSession(req: IncomingMessage): Promise<SessionPayload |
     try {
       const crypto = await import('crypto');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      const prismaModule = await import('./prisma');
+      const prismaModule = await import('./prisma.js');
       const prisma = prismaModule.default;
       const dbSession = await prisma.session.findUnique({
         where: { tokenHash },
@@ -87,7 +87,7 @@ export async function getSession(req: IncomingMessage): Promise<SessionPayload |
   // Fallback untuk development / admin header
   if (req.headers['x-admin-auth'] === 'true') {
     try {
-      const prismaModule = await import('./prisma');
+      const prismaModule = await import('./prisma.js');
       const prisma = prismaModule.default;
       const adminUser = await prisma.user.findFirst({
         where: { role: 'SUPER_ADMIN', isActive: true },

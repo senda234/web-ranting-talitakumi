@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import bcrypt from 'bcryptjs';
-import prisma from './_lib/prisma';
-import { parseJsonBody } from './_lib/body';
-import { setSessionCookie, clearSessionCookie, getSession } from './_lib/auth';
+import prisma from './_lib/prisma.js';
+import { parseJsonBody } from './_lib/body.js';
+import { setSessionCookie, clearSessionCookie, getSession } from './_lib/auth.js';
 import {
   setSecurityHeaders,
   checkRateLimit,
@@ -14,9 +14,9 @@ import {
   revokeAllUserSessions,
   logSecurityEvent,
   sendSystemEmail,
-} from './_lib/security';
-import { templateAccountActivated } from './_lib/email-templates';
-import { sendSuccess, sendError } from './_lib/response';
+} from './_lib/security.js';
+import { templateAccountActivated } from './_lib/email-templates.js';
+import { sendSuccess, sendError } from './_lib/response.js';
 
 /**
  * Endpoint Autentikasi Terpadu Berbasis Keamanan & Sesi Database:

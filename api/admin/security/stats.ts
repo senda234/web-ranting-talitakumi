@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import prisma from '../../_lib/prisma';
-import { getSession } from '../../_lib/auth';
-import { sendSuccess, sendError } from '../../_lib/response';
-import { setSecurityHeaders } from '../../_lib/security';
+import prisma from '../../_lib/prisma.js';
+import { getSession } from '../../_lib/auth.js';
+import { sendSuccess, sendError } from '../../_lib/response.js';
+import { setSecurityHeaders } from '../../_lib/security.js';
 
 /**
  * Endpoint Statistik & Metrik Keamanan (Super Admin Only - §28.2)

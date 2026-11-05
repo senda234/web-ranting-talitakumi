@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import prisma from '../_lib/prisma';
-import { getSession } from '../_lib/auth';
-import { parseJsonBody } from '../_lib/body';
-import { sendSuccess, sendError } from '../_lib/response';
+import prisma from '../_lib/prisma.js';
+import { getSession } from '../_lib/auth.js';
+import { parseJsonBody } from '../_lib/body.js';
+import { sendSuccess, sendError } from '../_lib/response.js';
 
 /**
  * Endpoint Pengelolaan Pengurus di Neon PostgreSQL
