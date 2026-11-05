@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useNotificationStore } from '@/stores/notifications';
 import {
   User,
   Mail,
@@ -29,6 +30,20 @@ const isLoading = ref(false);
 const isSaving = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
+
+const notificationStore = useNotificationStore();
+
+watch(successMessage, (newVal) => {
+  if (newVal) {
+    notificationStore.success('Berhasil', newVal);
+  }
+});
+
+watch(errorMessage, (newVal) => {
+  if (newVal) {
+    notificationStore.error('Gagal', newVal);
+  }
+});
 
 const roleLabel = computed(() => {
   if (authStore.isSuperAdmin) return 'Super Admin';

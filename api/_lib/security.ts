@@ -74,6 +74,11 @@ export async function checkRateLimit(
   maxAttempts: number,
   windowSeconds: number
 ): Promise<{ allowed: boolean; remaining: number; retryAfterSeconds: number }> {
+  // Mode development: nonaktifkan rate limit agar pengujian lokal tidak terblokir
+  if (process.env.NODE_ENV !== 'production') {
+    return { allowed: true, remaining: 999, retryAfterSeconds: 0 };
+  }
+
   const now = new Date();
   const resetAt = new Date(now.getTime() + windowSeconds * 1000);
 

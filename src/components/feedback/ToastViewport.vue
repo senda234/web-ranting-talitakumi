@@ -25,55 +25,44 @@ function handleDismiss(id: string) {
 <style scoped>
 .toast-viewport {
   position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 9999;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999; /* Z-index tertinggi agar melayang di atas seluruh elemen, modal & banner */
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   pointer-events: none;
   width: calc(100vw - 32px);
-  max-width: 380px;
+  max-width: 440px;
 }
 
-@media (min-width: 768px) {
-  .toast-viewport {
-    top: 24px;
-    right: 24px;
-  }
-}
-
-/* Animations adhering to §8.4 & §8.5 */
+/* Animasi Muncul 0.5s, Bertahan 1s, dan Menghilang 0.5s */
 .toast-enter-active {
-  transition: opacity var(--duration-normal) var(--motion-in),
-              transform var(--duration-normal) var(--motion-in);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast-leave-active {
-  transition: opacity var(--duration-fast) var(--motion-out),
-              transform var(--duration-fast) var(--motion-out);
+  transition: opacity 0.5s cubic-bezier(0.7, 0, 0.84, 0),
+              transform 0.5s cubic-bezier(0.7, 0, 0.84, 0);
   position: absolute;
   width: 100%;
 }
 
 .toast-move {
-  transition: transform var(--duration-normal) var(--motion-standard);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast-enter-from {
   opacity: 0;
-  transform: translateY(-8px) translateX(12px);
+  transform: translateY(-28px) scale(0.92);
 }
 
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
-}
-
-@media (max-width: 640px) {
-  .toast-enter-from {
-    transform: translateY(-8px);
-  }
+  transform: translateY(-20px) scale(0.92);
 }
 
 @media (prefers-reduced-motion: reduce) {

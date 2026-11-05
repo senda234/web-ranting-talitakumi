@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useContentStore } from '@/stores/content';
 import { useAuthStore } from '@/stores/auth';
+import { useNotificationStore } from '@/stores/notifications';
 import {
   Shield,
   UserPlus,
@@ -48,7 +49,7 @@ interface AdminUser {
   email: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR';
   permissions: string[];
-  status: 'PENDING_ACTIVATION' | 'ACTIVE' | 'DISABLED';
+  status: 'PENDING_ACTIVATION' | 'INVITED' | 'ACTIVE' | 'DISABLED';
   statusReason?: string | null;
   activeSessions: number;
   hasActiveInvitation: boolean;
@@ -95,7 +96,7 @@ const contentStore = useContentStore();
 const authStore = useAuthStore();
 const settings = contentStore.settings;
 
-const activeTab = ref<'identity' | 'users' | 'editor-matrix' | 'security'>('identity');
+const activeTab = ref<'identity' | 'users' | 'security'>('identity');
 const isSaved = ref(false);
 
 // Tab 1 state
@@ -111,6 +112,7 @@ function saveIdentity() {
   });
 
   isSaved.value = true;
+  notificationStore.success('Berhasil Disimpan', 'Identitas lembaga telah diperbarui.');
   setTimeout(() => {
     isSaved.value = false;
   }, 2500);
@@ -123,6 +125,20 @@ const securityStats = ref<SecurityStats | null>(null);
 const isLoadingData = ref(false);
 const actionError = ref('');
 const actionSuccess = ref('');
+
+const notificationStore = useNotificationStore();
+
+watch(actionSuccess, (newVal) => {
+  if (newVal) {
+    notificationStore.success('Berhasil', newVal);
+  }
+});
+
+watch(actionError, (newVal) => {
+  if (newVal) {
+    notificationStore.error('Perhatian', newVal);
+  }
+});
 
 // Modals
 const isInviteModalOpen = ref(false);
@@ -139,13 +155,7 @@ const userToDisable = ref<AdminUser | null>(null);
 const disableReason = ref('');
 const isDisabling = ref(false);
 
-// Edit permissions modal for a specific user
-const isPermissionsModalOpen = ref(false);
-const userToEditPermissions = ref<AdminUser | null>(null);
-const tempPermissions = ref<string[]>([]);
-const isSavingPermissions = ref(false);
-
-// Edit User Profile Modal (Superadmin untuk Admin & Editor; Admin untuk Editor)
+// Edit User Profile & Permissions Modal (Superadmin untuk Admin & Editor; Admin untuk Editor)
 const isEditUserModalOpen = ref(false);
 const userToEdit = ref<AdminUser | null>(null);
 const editUserName = ref('');
@@ -154,6 +164,44 @@ const editUserRole = ref<'ADMIN' | 'EDITOR'>('EDITOR');
 const editUserPassword = ref('');
 const editUserPermissions = ref<string[]>([]);
 const isSavingUser = ref(false);
+const editUserInviteUrl = ref('');
+const isLoadingInviteUrl = ref(false);
+const hasCopiedEditInvite = ref(false);
+
+function selectAllEditPermissions() {
+  editUserPermissions.value = AVAILABLE_PAGE_PERMISSIONS.map((p) => p.key);
+}
+
+function clearAllEditPermissions() {
+  editUserPermissions.value = [];
+}
+
+async function fetchOrCreateInviteUrl(userId: string) {
+  isLoadingInviteUrl.value = true;
+  try {
+    const res = await fetch(`/api/admin/users?action=invite_url&userId=${encodeURIComponent(userId)}`);
+    const data = await res.json();
+    if (res.ok && data.data?.activationUrl) {
+      editUserInviteUrl.value = data.data.activationUrl;
+    } else {
+      editUserInviteUrl.value = '';
+    }
+  } catch {
+    editUserInviteUrl.value = '';
+  } finally {
+    isLoadingInviteUrl.value = false;
+  }
+}
+
+function copyEditInviteUrl() {
+  if (!editUserInviteUrl.value) return;
+  navigator.clipboard.writeText(editUserInviteUrl.value);
+  hasCopiedEditInvite.value = true;
+  notificationStore.success('Tersalin', 'Tautan undangan berhasil disalin ke papan klip.');
+  setTimeout(() => {
+    hasCopiedEditInvite.value = false;
+  }, 3000);
+}
 
 function openEditUserModal(user: AdminUser) {
   userToEdit.value = user;
@@ -162,7 +210,14 @@ function openEditUserModal(user: AdminUser) {
   editUserRole.value = user.role === 'ADMIN' ? 'ADMIN' : 'EDITOR';
   editUserPassword.value = '';
   editUserPermissions.value = [...(user.permissions || [])];
+  editUserInviteUrl.value = '';
+  hasCopiedEditInvite.value = false;
   isEditUserModalOpen.value = true;
+
+  // Jika akun dinonaktifkan atau belum aktif, otomatis muat URL undangannya
+  if (user.status !== 'ACTIVE') {
+    fetchOrCreateInviteUrl(user.id);
+  }
 }
 
 function toggleEditPermission(permKey: string) {
@@ -176,11 +231,11 @@ function toggleEditPermission(permKey: string) {
 async function handleSaveEditedUser() {
   if (!userToEdit.value) return;
   if (!editUserName.value.trim()) {
-    alert('Nama pengurus wajib diisi');
+    notificationStore.warning('Validasi Gagal', 'Nama pengurus wajib diisi');
     return;
   }
   if (editUserPassword.value && editUserPassword.value.trim().length < 8) {
-    alert('Kata sandi baru minimal harus 8 karakter');
+    notificationStore.warning('Validasi Gagal', 'Kata sandi baru minimal harus 8 karakter');
     return;
   }
 
@@ -212,7 +267,7 @@ async function handleSaveEditedUser() {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.message || data.error || 'Gagal menyimpan perubahan profil');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal menyimpan perubahan profil');
       return;
     }
 
@@ -221,7 +276,7 @@ async function handleSaveEditedUser() {
     setTimeout(() => (actionSuccess.value = ''), 4000);
     await loadAdminData();
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   } finally {
     isSavingUser.value = false;
   }
@@ -357,117 +412,44 @@ function copyInviteUrl() {
   }, 3000);
 }
 
-async function handleChangeRole(user: AdminUser) {
-  if (!authStore.isSuperAdmin) {
-    alert('Hanya Super Admin yang berwenang mengubah peran akun.');
+function setRoleToEditor() {
+  editUserRole.value = 'EDITOR';
+  if (editUserPermissions.value.length === 0) {
+    editUserPermissions.value = ['gallery', 'officers', 'programs', 'pages'];
+  }
+}
+
+// Hapus Pengguna (Super Admin bisa hapus Admin & Editor; Admin hanya bisa hapus Editor)
+async function handleDeleteUser(user: AdminUser) {
+  if (user.id === authStore.user?.id) {
+    notificationStore.warning('Aksi Ditolak', 'Anda tidak dapat menghapus akun Anda sendiri.');
     return;
   }
 
-  const newRole = user.role === 'ADMIN' ? 'EDITOR' : 'ADMIN';
-  const confirmMsg =
-    newRole === 'ADMIN'
-      ? `Jadikan ${user.name} sebagai Admin? Akun ini akan memiliki akses penuh ke seluruh modul sistem.`
-      : `Ubah peran ${user.name} menjadi Editor? Anda dapat mengatur izin per halaman untuk akun ini.`;
+  if (authStore.isAdmin && user.role === 'ADMIN') {
+    notificationStore.warning('Aksi Ditolak', 'Hanya Super Admin yang berwenang menghapus akun Admin.');
+    return;
+  }
 
+  const confirmMsg = `Hapus pengguna "${user.name}" (${user.email}) secara permanen?\n\nPerhatian: Seluruh data sesi dan akses akun ini akan dihapus dari database. Tindakan ini tidak dapat dibatalkan.`;
   if (!confirm(confirmMsg)) return;
 
-  actionError.value = '';
   try {
-    const res = await fetch('/api/admin/users', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: user.id,
-        role: newRole,
-        permissions: newRole === 'EDITOR' ? ['gallery', 'officers', 'programs', 'pages'] : [],
-      }),
+    const res = await fetch(`/api/admin/users?id=${encodeURIComponent(user.id)}&action=delete_user`, {
+      method: 'DELETE',
     });
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.message || data.error || 'Gagal mengubah peran.');
+      notificationStore.error('Gagal Menghapus', data.message || data.error || 'Gagal menghapus pengguna.');
       return;
     }
 
-    actionSuccess.value = `Peran ${user.name} berhasil diubah menjadi ${newRole === 'ADMIN' ? 'Admin' : 'Editor'}.`;
-    setTimeout(() => (actionSuccess.value = ''), 4000);
+    actionSuccess.value = `Akun ${user.name} berhasil dihapus secara permanen.`;
+    notificationStore.success('Pengguna Dihapus', actionSuccess.value);
     await loadAdminData();
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
-  }
-}
-
-// Open modal to configure individual permissions for Editor
-function openPermissionsModal(user: AdminUser) {
-  userToEditPermissions.value = user;
-  tempPermissions.value = [...(user.permissions || [])];
-  isPermissionsModalOpen.value = true;
-}
-
-function togglePermissionInModal(permKey: string) {
-  if (tempPermissions.value.includes(permKey)) {
-    tempPermissions.value = tempPermissions.value.filter((k) => k !== permKey);
-  } else {
-    tempPermissions.value.push(permKey);
-  }
-}
-
-async function saveIndividualPermissions() {
-  if (!userToEditPermissions.value) return;
-
-  isSavingPermissions.value = true;
-  try {
-    const res = await fetch('/api/admin/users', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: userToEditPermissions.value.id,
-        permissions: tempPermissions.value,
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.message || data.error || 'Gagal menyimpan izin halaman.');
-      return;
-    }
-
-    isPermissionsModalOpen.value = false;
-    actionSuccess.value = `Izin halaman untuk ${userToEditPermissions.value.name} berhasil diperbarui.`;
-    setTimeout(() => (actionSuccess.value = ''), 4000);
-    await loadAdminData();
-  } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
-  } finally {
-    isSavingPermissions.value = false;
-  }
-}
-
-// Toggle permission directly from Matrix tab per user
-async function toggleUserPagePermission(editor: AdminUser, permKey: string) {
-  const currentPerms = [...(editor.permissions || [])];
-  const nextPerms = currentPerms.includes(permKey)
-    ? currentPerms.filter((k) => k !== permKey)
-    : [...currentPerms, permKey];
-
-  try {
-    const res = await fetch('/api/admin/users', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: editor.id,
-        permissions: nextPerms,
-      }),
-    });
-
-    if (res.ok) {
-      editor.permissions = nextPerms;
-    } else {
-      const data = await res.json();
-      alert(data.message || data.error || 'Gagal memperbarui izin.');
-    }
-  } catch (err: any) {
-    alert('Gagal memperbarui izin: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan saat menghapus pengguna: ' + err.message);
   }
 }
 
@@ -495,7 +477,7 @@ async function confirmDisableUser() {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.message || data.error || 'Gagal menonaktifkan pengguna.');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal menonaktifkan pengguna.');
       return;
     }
 
@@ -505,7 +487,7 @@ async function confirmDisableUser() {
     setTimeout(() => (actionSuccess.value = ''), 4000);
     await loadAdminData();
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   } finally {
     isDisabling.value = false;
   }
@@ -526,7 +508,7 @@ async function handleEnableUser(user: AdminUser) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.message || data.error || 'Gagal mengaktifkan pengguna.');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal mengaktifkan pengguna.');
       return;
     }
 
@@ -534,7 +516,7 @@ async function handleEnableUser(user: AdminUser) {
     setTimeout(() => (actionSuccess.value = ''), 4000);
     await loadAdminData();
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   }
 }
 
@@ -545,13 +527,13 @@ async function handleRevokeUserSessions(user: AdminUser) {
 
   actionError.value = '';
   try {
-    const res = await fetch(`/api/admin/users?userId=${encodeURIComponent(user.id)}`, {
+    const res = await fetch(`/api/admin/users?userId=${encodeURIComponent(user.id)}&action=revoke_sessions`, {
       method: 'DELETE',
     });
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.message || data.error || 'Gagal mencabut sesi.');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal mencabut sesi.');
       return;
     }
 
@@ -559,7 +541,7 @@ async function handleRevokeUserSessions(user: AdminUser) {
     setTimeout(() => (actionSuccess.value = ''), 4000);
     await loadAdminData();
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   }
 }
 
@@ -580,7 +562,7 @@ async function handleResendInvite(user: AdminUser) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.message || data.error || 'Gagal memperbarui undangan.');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal memperbarui undangan.');
       return;
     }
 
@@ -588,7 +570,7 @@ async function handleResendInvite(user: AdminUser) {
     isInviteModalOpen.value = true;
     await loadAdminData();
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   } finally {
     isInviting.value = false;
   }
@@ -615,10 +597,10 @@ async function handleRevokeMySession(sessionId: string, isCurrent: boolean) {
       }
     } else {
       const data = await res.json();
-      alert(data.message || data.error || 'Gagal mencabut sesi.');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal mencabut sesi.');
     }
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   }
 }
 
@@ -638,10 +620,10 @@ async function handleRevokeOtherSessions() {
       await loadAdminData();
     } else {
       const data = await res.json();
-      alert(data.message || data.error || 'Gagal mencabut sesi lain.');
+      notificationStore.error('Gagal', data.message || data.error || 'Gagal mencabut sesi lain.');
     }
   } catch (err: any) {
-    alert('Terjadi kesalahan: ' + err.message);
+    notificationStore.error('Kesalahan', 'Terjadi kesalahan: ' + err.message);
   }
 }
 
@@ -713,15 +695,6 @@ function getPermissionLabel(key: string): string {
       >
         <span>Pengguna & Hak Akses</span>
         <span v-if="usersList.length" class="tab-badge">{{ usersList.length }}</span>
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        :class="{ 'is-active': activeTab === 'editor-matrix' }"
-        @click="activeTab = 'editor-matrix'"
-      >
-        <span>Matriks Izin Editor (Per Pengguna)</span>
-        <span v-if="editorsList.length" class="tab-badge info">{{ editorsList.length }}</span>
       </button>
       <button
         type="button"
@@ -876,7 +849,7 @@ function getPermissionLabel(key: string): string {
                 <span v-if="user.status === 'ACTIVE'" class="status-badge active">
                   <span class="status-dot green"></span> Aktif
                 </span>
-                <span v-else-if="user.status === 'PENDING_ACTIVATION'" class="status-badge pending">
+                <span v-else-if="user.status === 'PENDING_ACTIVATION' || user.status === 'INVITED'" class="status-badge pending">
                   <span class="status-dot yellow"></span> Menunggu Aktivasi
                 </span>
                 <span v-else class="status-badge disabled" :title="user.statusReason || 'Akun dinonaktifkan'">
@@ -890,40 +863,16 @@ function getPermissionLabel(key: string): string {
               </td>
               <td class="text-right">
                 <div class="table-actions">
-                  <!-- Edit Profil: Super Admin bisa edit Admin & Editor; Admin bisa edit Editor (termasuk kata sandinya) -->
+                  <!-- Edit Profil & Izin: Super Admin bisa edit Admin & Editor; Admin bisa edit Editor (termasuk kata sandinya & izin halaman) -->
                   <button
                     v-if="authStore.isSuperAdmin || (authStore.isAdmin && user.role === 'EDITOR')"
                     type="button"
                     class="action-btn"
                     @click="openEditUserModal(user)"
-                    :title="`Edit profil & kata sandi ${user.name}`"
+                    :title="`Edit data, peran, sandi & izin ${user.name}`"
                   >
                     <Edit3 :size="15" />
-                    <span>Edit Profil</span>
-                  </button>
-
-                  <!-- Atur Izin Halaman jika Editor -->
-                  <button
-                    v-if="user.role === 'EDITOR'"
-                    type="button"
-                    class="action-btn info"
-                    @click="openPermissionsModal(user)"
-                    title="Atur izin halaman khusus pengguna ini"
-                  >
-                    <Sliders :size="15" />
-                    <span>Izin Halaman</span>
-                  </button>
-
-                  <!-- Change role (Hanya Super Admin) -->
-                  <button
-                    v-if="authStore.isSuperAdmin"
-                    type="button"
-                    class="action-btn"
-                    @click="handleChangeRole(user)"
-                    :title="user.role === 'ADMIN' ? 'Turunkan ke Editor' : 'Jadikan Admin'"
-                  >
-                    <Shield :size="15" />
-                    <span>{{ user.role === 'ADMIN' ? 'Jadikan Editor' : 'Jadikan Admin' }}</span>
+                    <span>Edit</span>
                   </button>
 
                   <!-- Revoke sessions -->
@@ -972,6 +921,18 @@ function getPermissionLabel(key: string): string {
                     <UserCheck :size="15" />
                     <span>Aktifkan</span>
                   </button>
+
+                  <!-- Hapus Pengguna Permanen -->
+                  <button
+                    v-if="(authStore.isSuperAdmin && user.id !== authStore.user?.id) || (authStore.isAdmin && user.role === 'EDITOR')"
+                    type="button"
+                    class="action-btn danger delete-btn"
+                    @click="handleDeleteUser(user)"
+                    :title="`Hapus pengguna ${user.name} secara permanen`"
+                  >
+                    <Trash2 :size="15" />
+                    <span>Hapus</span>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -980,99 +941,7 @@ function getPermissionLabel(key: string): string {
       </div>
     </section>
 
-    <!-- TAB 3: MATRIKS IZIN EDITOR PER PENGGUNA -->
-    <section v-if="activeTab === 'editor-matrix'" class="tab-pane card">
-      <div class="pane-head">
-        <div>
-          <h2 class="pane-title">Matriks Izin Halaman Editor (Per Pengguna)</h2>
-          <p class="pane-desc">
-            Super Admin dan Admin memiliki akses penuh ke seluruh halaman secara otomatis. Di bawah ini adalah konfigurasi izin per halaman khusus akun <strong>Editor</strong>. Anda dapat mengaktifkan atau menonaktifkan akses halaman untuk masing-masing pengguna secara mandiri.
-          </p>
-        </div>
-        <button
-          type="button"
-          class="btn btn-secondary btn-sm"
-          @click="loadAdminData"
-          :disabled="isLoadingData"
-        >
-          <RefreshCw :size="14" :class="{ 'spin-anim': isLoadingData }" />
-          <span>Segarkan Data</span>
-        </button>
-      </div>
-
-      <!-- EMPTY STATE JIKA BELUM ADA EDITOR -->
-      <div v-if="editorsList.length === 0" class="empty-matrix-card card">
-        <Sliders :size="32" class="text-muted" />
-        <h4 class="empty-matrix-title">Belum Ada Pengguna Ber-peran Editor</h4>
-        <p class="empty-matrix-desc">
-          Seluruh pengguna saat ini ber-peran Admin (akses penuh). Tambahkan pengguna dengan peran Editor untuk mengatur perizinan per halaman.
-        </p>
-        <button type="button" class="btn btn-primary" @click="isInviteModalOpen = true">
-          <UserPlus :size="16" />
-          <span>Undang Editor Baru</span>
-        </button>
-      </div>
-
-      <!-- TABEL MATRIKS PER USER EDITOR -->
-      <div v-else class="users-table-wrap">
-        <table class="data-table matrix-per-user-table">
-          <thead>
-            <tr>
-              <th>Pengguna (Editor)</th>
-              <th>Status</th>
-              <th v-for="page in AVAILABLE_PAGE_PERMISSIONS" :key="page.key" class="text-center">
-                <div class="th-perm-head">
-                  <component :is="page.icon" :size="15" />
-                  <span>{{ page.label }}</span>
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="editor in editorsList" :key="editor.id">
-              <td>
-                <div class="user-meta-cell">
-                  <div class="user-avatar-badge">
-                    {{ editor.name.slice(0, 2).toUpperCase() }}
-                  </div>
-                  <div>
-                    <div class="user-name-strong">{{ editor.name }}</div>
-                    <div class="user-email-muted">{{ editor.email }}</div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <span v-if="editor.status === 'ACTIVE'" class="status-badge active">Aktif</span>
-                <span v-else-if="editor.status === 'PENDING_ACTIVATION'" class="status-badge pending">Menunggu</span>
-                <span v-else class="status-badge disabled">Nonaktif</span>
-              </td>
-              <!-- CHECKBOX TOGGLE PER HALAMAN -->
-              <td
-                v-for="page in AVAILABLE_PAGE_PERMISSIONS"
-                :key="page.key"
-                class="text-center perm-toggle-cell"
-              >
-                <button
-                  type="button"
-                  class="toggle-perm-btn"
-                  :class="{ 'is-active': editor.permissions?.includes(page.key) }"
-                  @click="toggleUserPagePermission(editor, page.key)"
-                  :title="`Klik untuk ${editor.permissions?.includes(page.key) ? 'mencabut' : 'memberikan'} akses ${page.label}`"
-                >
-                  <CheckSquare v-if="editor.permissions?.includes(page.key)" :size="18" class="text-success" />
-                  <Square v-else :size="18" class="text-muted" />
-                  <span class="perm-status-text">
-                    {{ editor.permissions?.includes(page.key) ? 'Diizinkan' : 'Tutup' }}
-                  </span>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- TAB 4: AUDIT & DASBOR KEAMANAN -->
+    <!-- TAB 3: AUDIT & DASBOR KEAMANAN -->
     <section v-if="activeTab === 'security'" class="tab-pane card">
       <div class="pane-head">
         <div>
@@ -1229,60 +1098,6 @@ function getPermissionLabel(key: string): string {
       </div>
     </section>
 
-    <!-- MODAL ATUR IZIN HALAMAN KHUSUS PENGGUNA (EDITOR) -->
-    <div v-if="isPermissionsModalOpen" class="modal-backdrop" @click="isPermissionsModalOpen = false">
-      <div class="modal-dialog card" @click.stop>
-        <div class="modal-head">
-          <h3 class="modal-title">Atur Izin Halaman Editor</h3>
-          <button type="button" class="close-btn" @click="isPermissionsModalOpen = false">✕</button>
-        </div>
-
-        <div class="modal-body">
-          <p class="modal-desc">
-            Pilih halaman yang diizinkan untuk <strong>{{ userToEditPermissions?.name }}</strong> ({{ userToEditPermissions?.email }}). Pengguna ini hanya dapat melihat dan mengakses modul yang dicentang.
-          </p>
-
-          <div class="perms-picker-list">
-            <label
-              v-for="page in AVAILABLE_PAGE_PERMISSIONS"
-              :key="page.key"
-              class="perm-picker-item card"
-              :class="{ 'is-selected': tempPermissions.includes(page.key) }"
-            >
-              <input
-                type="checkbox"
-                :checked="tempPermissions.includes(page.key)"
-                @change="togglePermissionInModal(page.key)"
-                class="perm-checkbox"
-              />
-              <div class="perm-picker-info">
-                <div class="perm-picker-title">
-                  <component :is="page.icon" :size="16" />
-                  <span>{{ page.label }}</span>
-                </div>
-                <div class="perm-picker-path">Rute: <code>{{ page.path }}</code></div>
-              </div>
-            </label>
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="isPermissionsModalOpen = false">
-              Batal
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              :disabled="isSavingPermissions"
-              @click="saveIndividualPermissions"
-            >
-              <Save :size="16" />
-              <span>{{ isSavingPermissions ? 'Menyimpan...' : 'Simpan Izin Pengguna' }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- MODAL UNDANG PENGGUNA -->
     <div v-if="isInviteModalOpen" class="modal-backdrop" @click="isInviteModalOpen = false">
       <div class="modal-dialog card" @click.stop>
@@ -1418,6 +1233,53 @@ function getPermissionLabel(key: string): string {
             <span v-else>Sebagai Admin, Anda dapat mengatur nama, kata sandi baru, dan izin halaman untuk Editor ini.</span>
           </p>
 
+          <!-- TAUTAN UNDANGAN JIKA STATUS DINONAKTIFKAN / BELUM AKTIF -->
+          <div v-if="userToEdit?.status !== 'ACTIVE'" class="edit-invite-box">
+            <div class="label-row">
+              <label class="form-label font-bold text-navy">
+                <Key :size="15" />
+                <span>Tautan Undangan / Aktivasi Akun</span>
+              </label>
+              <span class="status-badge" :class="userToEdit?.status === 'DISABLED' ? 'disabled' : 'pending'">
+                {{ userToEdit?.status === 'DISABLED' ? 'Akun Dinonaktifkan' : 'Menunggu Aktivasi' }}
+              </span>
+            </div>
+            <p class="field-hint">
+              Akun ini belum berstatus aktif. Anda dapat menyalin tautan undangan berikut untuk mengaktifkan akun:
+            </p>
+            <div class="invite-copy-group">
+              <input
+                type="text"
+                readonly
+                :value="isLoadingInviteUrl ? 'Memuat tautan undangan...' : editUserInviteUrl"
+                class="form-input invite-url-input"
+                placeholder="Memuat tautan undangan..."
+                @click="($event.target as HTMLInputElement).select()"
+              />
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="copyEditInviteUrl"
+                :disabled="!editUserInviteUrl || isLoadingInviteUrl"
+                title="Salin tautan ke papan klip"
+              >
+                <CheckCircle v-if="hasCopiedEditInvite" :size="15" class="text-success" />
+                <Copy v-else :size="15" />
+                <span>{{ hasCopiedEditInvite ? 'Tersalin!' : 'Salin' }}</span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                @click="fetchOrCreateInviteUrl(userToEdit!.id)"
+                :disabled="isLoadingInviteUrl"
+                title="Buat ulang tautan baru (berlaku 24 jam)"
+              >
+                <RefreshCw :size="14" :class="{ 'spin-anim': isLoadingInviteUrl }" />
+                <span>Baru</span>
+              </button>
+            </div>
+          </div>
+
           <!-- NAMA -->
           <div class="form-group">
             <label class="form-label">Nama Lengkap Pengurus</label>
@@ -1450,13 +1312,37 @@ function getPermissionLabel(key: string): string {
             </p>
           </div>
 
-          <!-- ROLE (HANYA SUPER ADMIN BISA MENGUBAH) -->
-          <div v-if="authStore.isSuperAdmin" class="form-group">
-            <label class="form-label">Peran Pengurus</label>
-            <select v-model="editUserRole" class="form-input">
-              <option value="ADMIN">Admin (Akses Penuh)</option>
-              <option value="EDITOR">Editor (Izin Halaman Spesifik)</option>
-            </select>
+          <!-- ROLE / PERAN PENGURUS (HANYA SUPER ADMIN BISA MENGUBAH) -->
+          <div v-if="authStore.isSuperAdmin" class="form-group role-selector-group">
+            <label class="form-label">Peran Akun Pengurus</label>
+            <div class="role-button-group">
+              <button
+                type="button"
+                class="role-pill-btn"
+                :class="{ 'is-active': editUserRole === 'ADMIN' }"
+                @click="editUserRole = 'ADMIN'"
+              >
+                <Shield :size="16" />
+                <span>Admin (Akses Penuh)</span>
+              </button>
+              <button
+                type="button"
+                class="role-pill-btn"
+                :class="{ 'is-active': editUserRole === 'EDITOR' }"
+                @click="setRoleToEditor"
+              >
+                <Edit3 :size="16" />
+                <span>Jadikan Editor</span>
+              </button>
+            </div>
+            <p class="field-hint">
+              <span v-if="editUserRole === 'ADMIN'">
+                Akun Admin memiliki wewenang penuh ke seluruh fitur dan pengaturan pengurus.
+              </span>
+              <span v-else>
+                Akun Editor hanya dapat mengelola halaman yang diberi tanda centang pada daftar izin di bawah.
+              </span>
+            </p>
           </div>
 
           <!-- KATA SANDI BARU (TIDAK PERLU SANDI LAMA) -->
@@ -1478,20 +1364,31 @@ function getPermissionLabel(key: string): string {
 
           <!-- PERIZINAN HALAMAN JIKA EDITOR -->
           <div v-if="editUserRole === 'EDITOR'" class="form-group perms-section">
-            <label class="form-label">Izin Halaman Akses untuk Editor Ini:</label>
+            <div class="label-row">
+              <label class="form-label">Izin Akses Halaman Editor:</label>
+              <div class="perm-quick-actions">
+                <button type="button" class="btn-link-sm" @click="selectAllEditPermissions">Pilih Semua</button>
+                <span class="text-muted">•</span>
+                <button type="button" class="btn-link-sm" @click="clearAllEditPermissions">Hapus Semua</button>
+              </div>
+            </div>
+            <p class="field-hint">
+              Centang modul/halaman yang boleh dikelola oleh akun Editor ini. Halaman yang tidak dicentang akan otomatis dikunci.
+            </p>
             <div class="perms-checkboxes-grid">
               <label
                 v-for="page in AVAILABLE_PAGE_PERMISSIONS"
                 :key="page.key"
                 class="perm-checkbox-item"
+                :class="{ 'is-checked': editUserPermissions.includes(page.key) }"
               >
                 <input
                   type="checkbox"
                   :checked="editUserPermissions.includes(page.key)"
                   @change="toggleEditPermission(page.key)"
                 />
-                <component :is="page.icon" :size="15" />
-                <span>{{ page.label }}</span>
+                <component :is="page.icon" :size="16" />
+                <span class="perm-title-text">{{ page.label }}</span>
               </label>
             </div>
           </div>
@@ -2387,5 +2284,97 @@ function getPermissionLabel(key: string): string {
 .btn-sm {
   padding: 6px 12px;
   font-size: 0.8rem;
+}
+
+.perm-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-link-sm {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--blue, #0284c7);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-link-sm:hover {
+  color: var(--navy, #1e3a8a);
+}
+
+.action-btn.delete-btn {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.action-btn.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.edit-invite-box {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.invite-copy-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.invite-url-input {
+  font-size: 0.8rem;
+  background: white;
+  font-family: monospace;
+}
+
+.role-button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.role-pill-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-pill-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.role-pill-btn.is-active {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 </style>

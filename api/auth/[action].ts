@@ -541,7 +541,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     try {
-      const session = getSession(req);
+      const session = await getSession(req);
       if (session) {
         await revokeAllUserSessions(session.userId);
       }
@@ -559,7 +559,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return sendError(res, 405, 'Metode tidak diizinkan');
     }
 
-    const session = getSession(req);
+    const session = await getSession(req);
     if (!session) {
       return sendError(res, 401, 'Sesi tidak valid atau telah berakhir');
     }
@@ -598,11 +598,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         return sendError(res, 400, 'Token aktivasi dan kata sandi wajib diisi');
       }
 
-      if (password.length < 12) {
+      if (password.length < 8) {
         return sendError(
           res,
           400,
-          'Kata sandi harus minimal 12 karakter untuk memenuhi standar keamanan ranting.'
+          'Kata sandi harus minimal 8 karakter.'
         );
       }
 

@@ -67,16 +67,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="app-toast"
-    :class="`toast-${toast.type}`"
-    :role="toast.type === 'error' ? 'alert' : 'status'"
-    :aria-live="toast.type === 'error' ? 'assertive' : 'polite'"
-    @mouseenter="pauseTimer"
-    @mouseleave="resumeTimer"
-    @focusin="pauseTimer"
-    @focusout="resumeTimer"
-  >
+  <div class="app-toast" :class="`toast-${toast.type}`" :role="toast.type === 'error' ? 'alert' : 'status'"
+    :aria-live="toast.type === 'error' ? 'assertive' : 'polite'" @mouseenter="pauseTimer" @mouseleave="resumeTimer"
+    @focusin="pauseTimer" @focusout="resumeTimer">
     <div class="toast-icon-wrap" aria-hidden="true">
       <CheckCircle2 v-if="toast.type === 'success'" :size="20" class="toast-icon icon-success" />
       <AlertCircle v-else-if="toast.type === 'error'" :size="20" class="toast-icon icon-error" />
@@ -87,23 +80,13 @@ onUnmounted(() => {
     <div class="toast-body">
       <div class="toast-title">{{ toast.title }}</div>
       <p v-if="toast.description" class="toast-desc">{{ toast.description }}</p>
-      <button
-        v-if="toast.actionLabel"
-        type="button"
-        class="toast-action-btn"
-        @click="handleAction"
-      >
+      <button v-if="toast.actionLabel" type="button" class="toast-action-btn" @click="handleAction">
         {{ toast.actionLabel }}
       </button>
     </div>
 
-    <button
-      type="button"
-      class="toast-close-btn"
-      title="Tutup pemberitahuan"
-      aria-label="Tutup pemberitahuan"
-      @click="handleClose"
-    >
+    <button type="button" class="toast-close-btn" title="Tutup pemberitahuan" aria-label="Tutup pemberitahuan"
+      @click="handleClose">
       <X :size="16" />
     </button>
   </div>
@@ -115,45 +98,59 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 12px;
   width: 100%;
-  max-width: 380px;
-  padding: 14px 16px;
-  background: var(--white);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(16, 33, 63, 0.12);
+  max-width: 440px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 36px -4px rgba(16, 33, 63, 0.22), 0 6px 16px -2px rgba(16, 33, 63, 0.12);
   pointer-events: auto;
   position: relative;
   transition: transform var(--duration-fast) var(--motion-standard),
-              box-shadow var(--duration-fast) var(--motion-standard);
+    box-shadow var(--duration-fast) var(--motion-standard);
 }
 
 .app-toast:hover {
-  box-shadow: 0 12px 28px rgba(16, 33, 63, 0.16);
+  box-shadow: 0 20px 40px -4px rgba(16, 33, 63, 0.26);
 }
 
 /* Status variants */
 .toast-success {
-  border-left: 4px solid var(--status-success);
+  border-left: 5px solid #16a34a;
 }
+
 .toast-error {
-  border-left: 4px solid var(--status-error);
+  border-left: 5px solid #dc2626;
 }
+
 .toast-warning {
-  border-left: 4px solid var(--status-warning);
+  border-left: 5px solid #d97706;
 }
+
 .toast-info {
-  border-left: 4px solid var(--status-info);
+  border-left: 5px solid #2563eb;
 }
 
 .toast-icon-wrap {
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
-.icon-success { color: var(--status-success); }
-.icon-error { color: var(--status-error); }
-.icon-warning { color: var(--status-warning); }
-.icon-info { color: var(--status-info); }
+.icon-success {
+  color: #16a34a;
+}
+
+.icon-error {
+  color: #dc2626;
+}
+
+.icon-warning {
+  color: #d97706;
+}
+
+.icon-info {
+  color: #2563eb;
+}
 
 .toast-body {
   flex: 1;
@@ -216,4 +213,3 @@ onUnmounted(() => {
   color: var(--ink);
 }
 </style>
-

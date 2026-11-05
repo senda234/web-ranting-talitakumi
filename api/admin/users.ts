@@ -28,7 +28,7 @@ import {
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   setSecurityHeaders(res);
 
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) {
     return sendError(res, 401, 'Akses ditolak: autentikasi diperlukan');
   }
@@ -43,8 +43,64 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const appUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5173'}`;
 
   try {
-    // 1. GET: Ambil daftar seluruh user (kecuali SUPER_ADMIN)
+    // 1. GET: Ambil daftar seluruh user (kecuali SUPER_ADMIN) atau ambil URL undangan
     if (method === 'GET') {
+      const urlParams = new URL(req.url || '', `http://${req.headers.host}`).searchParams;
+      const action = urlParams.get('action');
+
+      // Ambil / buat URL undangan aktif untuk user tertentu (jika status dinonaktifkan atau belum aktif)
+      if (action === 'invite_url' || action === 'get_invite_url') {
+        const userId = urlParams.get('userId');
+        if (!userId) {
+          return sendError(res, 400, 'User ID wajib disertakan');
+        }
+
+        const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+        if (!targetUser) {
+          return sendError(res, 404, 'Pengguna tidak ditemukan');
+        }
+
+        if (targetUser.role === 'SUPER_ADMIN') {
+          return sendError(res, 403, 'Aksi ditolak pada akun Super Admin');
+        }
+
+        const rawToken = generateSecureToken();
+        const tokenHash = hashToken(rawToken);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 jam
+
+        // Bersihkan undangan lama yang belum digunakan untuk email ini
+        await prisma.adminInvitation.deleteMany({
+          where: { email: targetUser.email, isUsed: false },
+        });
+
+        // Buat record undangan baru
+        await prisma.adminInvitation.create({
+          data: {
+            email: targetUser.email,
+            name: targetUser.name,
+            role: targetUser.role,
+            tokenHash,
+            expiresAt,
+            createdById: session.userId,
+            sendAttempts: 0,
+          },
+        });
+
+        const activationUrl = `${appUrl}/admin/aktivasi?token=${rawToken}`;
+        return sendSuccess(
+          res,
+          {
+            userId: targetUser.id,
+            name: targetUser.name,
+            email: targetUser.email,
+            status: targetUser.status,
+            activationUrl,
+            expiresAt,
+          },
+          'Tautan undangan berhasil didapatkan'
+        );
+      }
+
       const users = await prisma.user.findMany({
         where: {
           role: { not: 'SUPER_ADMIN' }, // SUPER_ADMIN tidak muncul pada tabel user
@@ -156,9 +212,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             role: targetRole,
             permissions: assignedPermissions,
             authProvider: 'GOOGLE',
-            status: 'INVITED',
+            status: 'PENDING_ACTIVATION',
             isActive: false,
-            passwordHash: 'UNSET_INVITED_GOOGLE',
+            passwordHash: null,
           },
         });
 
@@ -368,10 +424,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return sendSuccess(res, updated, 'Profil pengguna berhasil diperbarui');
     }
 
-    // 4. DELETE: Cabut seluruh sesi aktif user tertentu
+    // 4. DELETE: Hapus pengguna atau cabut seluruh sesi aktif
     if (method === 'DELETE') {
       const urlParams = new URL(req.url || '', `http://${req.headers.host}`).searchParams;
-      const targetUserId = urlParams.get('userId');
+      const targetUserId = urlParams.get('id') || urlParams.get('userId');
+      const action = urlParams.get('action') || (urlParams.get('revokeSessions') === 'true' ? 'revoke_sessions' : 'delete_user');
 
       if (!targetUserId) {
         return sendError(res, 400, 'ID pengguna sasaran wajib disertakan');
@@ -382,27 +439,59 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         return sendError(res, 404, 'Pengguna tidak ditemukan');
       }
 
+      // Akun Super Admin tidak boleh dihapus atau dicabut sesinya melalui antarmuka ini
       if (targetUser.role === 'SUPER_ADMIN') {
         return sendError(res, 403, 'Aksi ditolak pada akun Super Admin');
       }
 
-      // Admin biasa tidak boleh mencabut sesi Admin lain
-      if (session.role === 'ADMIN' && targetUser.role === 'ADMIN' && targetUser.id !== session.userId) {
-        return sendError(res, 403, 'Hanya Super Admin yang berwenang mencabut sesi akun Admin lain');
+      // Pengguna tidak dapat menghapus akunnya sendiri
+      if (action === 'delete_user' && targetUser.id === session.userId) {
+        return sendError(res, 400, 'Anda tidak dapat menghapus akun Anda sendiri');
       }
 
-      await revokeAllUserSessions(targetUserId);
+      // Admin biasa tidak boleh mencabut sesi atau menghapus sesama Admin
+      if (session.role === 'ADMIN' && targetUser.role === 'ADMIN') {
+        return sendError(res, 403, 'Hanya Super Admin yang berwenang mengelola atau menghapus akun Admin');
+      }
+
+      // OPSI A: CABUT SESI
+      if (action === 'revoke_sessions') {
+        await revokeAllUserSessions(targetUserId);
+
+        await logSecurityEvent({
+          eventType: 'USER_SESSIONS_REVOKED_BY_ADMIN',
+          severity: 'WARN',
+          actorEmail: session.email,
+          ipAddress: ip,
+          userAgent,
+          details: `Seluruh sesi pengguna ID ${targetUserId} (${targetUser.email}) telah dicabut oleh ${session.email}`,
+        });
+
+        return sendSuccess(res, null, 'Seluruh sesi pengguna telah berhasil dicabut');
+      }
+
+      // OPSI B: HAPUS PENGGUNA SECARA PERMANEN
+      await prisma.$transaction(async (tx) => {
+        // Hapus sesi pengguna
+        await tx.session.deleteMany({ where: { userId: targetUserId } });
+        // Hapus token reset kata sandi jika ada
+        await tx.passwordResetToken.deleteMany({ where: { userId: targetUserId } });
+        // Hapus undangan jika ada
+        await tx.adminInvitation.deleteMany({ where: { email: targetUser.email } });
+        // Hapus record user
+        await tx.user.delete({ where: { id: targetUserId } });
+      });
 
       await logSecurityEvent({
-        eventType: 'USER_SESSIONS_REVOKED_BY_ADMIN',
+        eventType: 'USER_DELETED_BY_ADMIN',
         severity: 'WARN',
         actorEmail: session.email,
         ipAddress: ip,
         userAgent,
-        details: `Seluruh sesi pengguna ID ${targetUserId} (${targetUser.email}) telah dicabut oleh ${session.email}`,
+        details: `Pengguna ${targetUser.name} (${targetUser.email}, role: ${targetUser.role}) telah dihapus permanen oleh ${session.email}`,
       });
 
-      return sendSuccess(res, null, 'Seluruh sesi pengguna telah berhasil dicabut');
+      return sendSuccess(res, null, `Pengguna ${targetUser.name} berhasil dihapus secara permanen`);
     }
 
     return sendError(res, 405, 'Metode HTTP tidak didukung');

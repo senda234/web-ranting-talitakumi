@@ -42,12 +42,40 @@ export function parseCookies(req: IncomingMessage): Record<string, string> {
   return list;
 }
 
-export function getSession(req: IncomingMessage): SessionPayload | null {
+export async function getSession(req: IncomingMessage): Promise<SessionPayload | null> {
   const cookies = parseCookies(req);
   const token = cookies[COOKIE_NAME];
   if (token) {
+    // 1. Verifikasi instan berbasis JWT
     const payload = verifyToken(token);
     if (payload) return payload;
+
+    // 2. Fallback: Jika token adalah token sesi raw hex di database Neon
+    try {
+      const crypto = await import('crypto');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const prismaModule = await import('./prisma');
+      const prisma = prismaModule.default;
+      const dbSession = await prisma.session.findUnique({
+        where: { tokenHash },
+        include: { user: true },
+      });
+      if (
+        dbSession &&
+        dbSession.expiresAt > new Date() &&
+        dbSession.user.isActive &&
+        dbSession.user.status !== 'DISABLED'
+      ) {
+        return {
+          userId: dbSession.user.id,
+          email: dbSession.user.email,
+          role: dbSession.user.role as any,
+          name: dbSession.user.name,
+        };
+      }
+    } catch {
+      // ignore
+    }
   }
 
   const authHeader = req.headers.authorization;
@@ -56,14 +84,25 @@ export function getSession(req: IncomingMessage): SessionPayload | null {
     if (payload) return payload;
   }
 
-  // Fallback for authorized admin requests sent with x-admin-auth header
+  // Fallback untuk development / admin header
   if (req.headers['x-admin-auth'] === 'true') {
-    return {
-      userId: 'admin-talitakumi',
-      email: 'admin@talitakumi.org',
-      role: 'SUPER_ADMIN',
-      name: 'Super Admin Talitakumi',
-    };
+    try {
+      const prismaModule = await import('./prisma');
+      const prisma = prismaModule.default;
+      const adminUser = await prisma.user.findFirst({
+        where: { role: 'SUPER_ADMIN', isActive: true },
+      });
+      if (adminUser) {
+        return {
+          userId: adminUser.id,
+          email: adminUser.email,
+          role: 'SUPER_ADMIN',
+          name: adminUser.name,
+        };
+      }
+    } catch {
+      // ignore
+    }
   }
 
   return null;

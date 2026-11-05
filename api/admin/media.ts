@@ -10,7 +10,7 @@ import { sendSuccess, sendError } from '../_lib/response';
  * path (secure_url), public_id, dimensi, dan relasi album disimpan di Neon DB.
  */
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) {
     return sendError(res, 401, 'Akses ditolak: autentikasi diperlukan');
   }

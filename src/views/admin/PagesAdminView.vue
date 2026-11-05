@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useContentStore } from '@/stores/content';
+import { useNotificationStore } from '@/stores/notifications';
 import { Save, Check, FileText, BookOpen } from 'lucide-vue-next';
 
 const contentStore = useContentStore();
+const notificationStore = useNotificationStore();
 const activeTab = ref<'home' | 'history'>('home');
 const isSaved = ref(false);
 
@@ -49,6 +51,7 @@ function handleSave() {
   });
 
   isSaved.value = true;
+  notificationStore.success('Berhasil Disimpan', 'Perubahan teks halaman telah disimpan.');
   setTimeout(() => {
     isSaved.value = false;
   }, 2500);

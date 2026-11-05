@@ -13,7 +13,7 @@ import { setSecurityHeaders, getClientInfo, logSecurityEvent, revokeSession } fr
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   setSecurityHeaders(res);
 
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) {
     return sendError(res, 401, 'Autentikasi diperlukan');
   }

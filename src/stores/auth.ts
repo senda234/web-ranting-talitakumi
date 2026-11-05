@@ -70,37 +70,14 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
 
-      // Offline fallback: if localStorage set, keep minimal state
-      if (localStorage.getItem('talitakumi_admin_auth') === 'true') {
-        user.value = user.value || {
-          id: 'local-admin',
-          email: 'admin@talitakumi.org',
-          name: 'Super Admin Talitakumi',
-          role: 'SUPER_ADMIN',
-          status: 'ACTIVE',
-        };
-        isInitialized.value = true;
-        return true;
-      }
-
+      // Sesi tidak valid di backend: bersihkan state lokal
       user.value = null;
       localStorage.removeItem('talitakumi_admin_auth');
       isInitialized.value = true;
       return false;
     } catch {
-      // Offline fallback
-      if (localStorage.getItem('talitakumi_admin_auth') === 'true') {
-        user.value = user.value || {
-          id: 'local-admin',
-          email: 'admin@talitakumi.org',
-          name: 'Super Admin Talitakumi',
-          role: 'SUPER_ADMIN',
-          status: 'ACTIVE',
-        };
-        isInitialized.value = true;
-        return true;
-      }
       user.value = null;
+      localStorage.removeItem('talitakumi_admin_auth');
       isInitialized.value = true;
       return false;
     } finally {
@@ -191,26 +168,7 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && (data.success || data.user || data.data?.user)) {
-        user.value = data.data?.user || data.user || {
-          id: 'admin-id',
-          email: cleanEmail,
-          name: 'Super Admin Talitakumi',
-          role: 'SUPER_ADMIN',
-          status: 'ACTIVE',
-        };
-        localStorage.setItem('talitakumi_admin_auth', 'true');
-        return { success: true };
-      }
-
-      // Offline / fallback credentials for local testing
-      if (!res.ok && (res.status === 404 || res.status >= 500) && cleanEmail.toLowerCase() === 'admin@talitakumi.org' && password === 'admin123') {
-        user.value = {
-          id: 'local-admin',
-          email: 'admin@talitakumi.org',
-          name: 'Super Admin Talitakumi',
-          role: 'SUPER_ADMIN',
-          status: 'ACTIVE',
-        };
+        user.value = data.data?.user || data.user;
         localStorage.setItem('talitakumi_admin_auth', 'true');
         return { success: true };
       }
@@ -220,19 +178,6 @@ export const useAuthStore = defineStore('auth', () => {
         message: data.message || data.error || 'Email atau kata sandi tidak sesuai.',
       };
     } catch {
-      // Offline fallback
-      if (cleanEmail.toLowerCase() === 'admin@talitakumi.org' && password === 'admin123') {
-        user.value = {
-          id: 'local-admin',
-          email: 'admin@talitakumi.org',
-          name: 'Super Admin Talitakumi',
-          role: 'SUPER_ADMIN',
-          status: 'ACTIVE',
-        };
-        localStorage.setItem('talitakumi_admin_auth', 'true');
-        return { success: true };
-      }
-
       return {
         success: false,
         message: 'Gagal menghubungi server. Periksa koneksi internet Anda.',

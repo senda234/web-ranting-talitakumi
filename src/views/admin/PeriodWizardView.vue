@@ -2,10 +2,12 @@
 import { ref } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
 import { useContentStore } from '@/stores/content';
+import { useNotificationStore } from '@/stores/notifications';
 import { ArrowLeft, CheckCircle2, Copy, Sparkles, AlertTriangle } from 'lucide-vue-next';
 
 const router = useRouter();
 const contentStore = useContentStore();
+const notificationStore = useNotificationStore();
 
 const currentStep = ref(1);
 
@@ -50,6 +52,7 @@ function handleActivate() {
     }
 
     isSubmitting.value = false;
+    notificationStore.success('Periode Baru Diaktifkan', `Periode ${newPeriodName.value} berhasil dibuat.`);
     router.push('/admin/pengurus');
   }, 500);
 }

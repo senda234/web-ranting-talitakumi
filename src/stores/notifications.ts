@@ -18,19 +18,9 @@ export const useNotificationStore = defineStore('notifications', () => {
   const toasts = ref<ToastMessage[]>([]);
 
   function getDefaultDuration(type: ToastType, hasAction: boolean): number | null {
-    if (hasAction) return 10000;
-    switch (type) {
-      case 'success':
-        return 4000;
-      case 'info':
-        return 5000;
-      case 'warning':
-        return 7000;
-      case 'error':
-        return 8000; // error minimal 8 detik / manual
-      default:
-        return 5000;
-    }
+    if (hasAction) return 8000;
+    // Bertahan 1 detik (1000ms) sesuai permintaan
+    return 1000;
   }
 
   function addToast(toast: Omit<ToastMessage, 'id' | 'createdAt'>) {

@@ -3,6 +3,7 @@ import PublicLayout from '@/layouts/PublicLayout.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import HomeView from '@/views/public/HomeView.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useLoadingStore } from '@/stores/loading';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -148,35 +149,36 @@ const router = createRouter({
 
 // Navigation guard for admin protection & role-based access
 router.beforeEach(async (to, from, next) => {
+  if (to.path !== from.path) {
+    const loadingStore = useLoadingStore();
+    loadingStore.show();
+  }
+
   if (to.matched.some((record) => record.meta.requiresAuth)) {
-    const isAuth = localStorage.getItem('talitakumi_admin_auth');
-    if (!isAuth) {
-      next({ path: '/admin/login', query: { redirect: to.fullPath } });
+    const authStore = useAuthStore();
+    if (!authStore.user) {
+      const isValid = await authStore.checkSession();
+      if (!isValid || !authStore.user) {
+        next({ path: '/admin/login', query: { redirect: to.fullPath } });
+        return;
+      }
+    }
+
+    // 1. Role-based page guard (Super Admin & Admin only)
+    const allowedRoles = to.meta.roles as string[] | undefined;
+    if (allowedRoles && !allowedRoles.includes(authStore.user.role)) {
+      alert('Akses Ditolak: Halaman ini hanya dapat diakses oleh Super Admin dan Admin.');
+      next({ path: '/admin' });
       return;
     }
 
-    const authStore = useAuthStore();
-    if (!authStore.user) {
-      await authStore.checkSession();
-    }
-
-    if (authStore.user) {
-      // 1. Role-based page guard (Super Admin & Admin only)
-      const allowedRoles = to.meta.roles as string[] | undefined;
-      if (allowedRoles && !allowedRoles.includes(authStore.user.role)) {
-        alert('Akses Ditolak: Halaman ini hanya dapat diakses oleh Super Admin dan Admin.');
+    // 2. Granular page permission guard per user for Editor
+    const pageKey = to.meta.pageKey as string | undefined;
+    if (pageKey && authStore.user.role === 'EDITOR') {
+      if (!authStore.hasPagePermission(pageKey)) {
+        alert('Akses Ditolak: Akun Editor Anda belum diberikan izin untuk mengakses halaman ini.');
         next({ path: '/admin' });
         return;
-      }
-
-      // 2. Granular page permission guard per user for Editor
-      const pageKey = to.meta.pageKey as string | undefined;
-      if (pageKey && authStore.user.role === 'EDITOR') {
-        if (!authStore.hasPagePermission(pageKey)) {
-          alert('Akses Ditolak: Akun Editor Anda belum diberikan izin untuk mengakses halaman ini.');
-          next({ path: '/admin' });
-          return;
-        }
       }
     }
   }
@@ -184,12 +186,20 @@ router.beforeEach(async (to, from, next) => {
 });
 
 router.afterEach((to) => {
+  const loadingStore = useLoadingStore();
+  loadingStore.hide(250);
+
   const baseTitle = 'AMGPM Ranting Talitakumi';
   if (to.meta.title) {
     document.title = `${to.meta.title} — ${baseTitle}`;
   } else {
     document.title = baseTitle;
   }
+});
+
+router.onError(() => {
+  const loadingStore = useLoadingStore();
+  loadingStore.forceHide();
 });
 
 export default router;

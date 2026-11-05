@@ -9,7 +9,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 405, 'Metode tidak diizinkan');
   }
 
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) {
     return sendError(res, 401, 'Akses ditolak: autentikasi diperlukan');
   }

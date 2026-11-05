@@ -14,7 +14,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 405, 'Metode tidak diizinkan');
   }
 
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session || (session.role !== 'SUPER_ADMIN' && session.role !== 'ADMIN')) {
     return sendError(res, 403, 'Akses ditolak: Hanya Super Admin dan Admin yang berwenang melihat dasbor keamanan');
   }
