@@ -198,3 +198,4 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 500, 'Terjadi kesalahan sistem', err.message);
   }
 }
+

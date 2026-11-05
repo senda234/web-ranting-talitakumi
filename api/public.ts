@@ -173,3 +173,4 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 500, `Gagal memuat data resource: ${resource}`, err.message);
   }
 }
+
