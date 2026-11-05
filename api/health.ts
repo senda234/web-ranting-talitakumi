@@ -1,42 +1,18 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import fs from 'fs';
-import path from 'path';
 
 export default async function handler(_req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Content-Type', 'application/json');
 
   const diagnostics: Record<string, any> = {
     time: new Date().toISOString(),
-    node: process.version,
-    cwd: process.cwd(),
+    commit: 'test-auth-import',
   };
 
   try {
-    diagnostics.filesAtRoot = fs.readdirSync(process.cwd());
-  } catch (e: any) {
-    diagnostics.filesAtRoot = e.message;
-  }
-
-  try {
-    diagnostics.filesAtApi = fs.readdirSync(path.join(process.cwd(), 'api'));
-  } catch (e: any) {
-    diagnostics.filesAtApi = e.message;
-  }
-
-  try {
-    diagnostics.filesAtApiLib = fs.readdirSync(path.join(process.cwd(), 'api', '_lib'));
-  } catch (e: any) {
-    diagnostics.filesAtApiLib = e.message;
-  }
-
-  // Test with .js extension
-  try {
-    const prismaModule = await import('./_lib/prisma.js');
-    const prisma = prismaModule.default || prismaModule.prisma;
-    const count = await prisma.user.count();
-    diagnostics.prismaWithJs = { ok: true, userCount: count };
+    const authModule = await import('./auth.js');
+    diagnostics.authModule = { ok: true, isFunction: typeof authModule.default === 'function' };
   } catch (err: any) {
-    diagnostics.prismaWithJs = { ok: false, error: err.message, stack: err.stack };
+    diagnostics.authModule = { ok: false, error: err.message, stack: err.stack };
   }
 
   res.statusCode = 200;
