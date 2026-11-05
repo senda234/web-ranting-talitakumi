@@ -10,11 +10,9 @@ const DEFAULT_DATABASE_URL =
 
 const effectiveDbUrl = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
 
+// Pastikan DATABASE_URL selalu tersedia
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = effectiveDbUrl;
-}
-if (!process.env.DATABASE_URL_UNPOOLED) {
-  process.env.DATABASE_URL_UNPOOLED = effectiveDbUrl;
 }
 
 export const prisma =
