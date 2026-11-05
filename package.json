@@ -13,6 +13,7 @@
     "postinstall": "prisma generate",
     "preview": "vite preview",
     "prisma:generate": "prisma generate",
+    "seed:admin": "node scripts/seed-superadmin.cjs",
     "migrate:media": "tsx scripts/migrate-to-cloudinary.ts"
   },
   "bugs": {
