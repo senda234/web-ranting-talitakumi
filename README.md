@@ -131,9 +131,9 @@ Proyek ini mengonsolidasikan seluruh endpoint backend ke dalam **tepat 10 Server
 5. `api/admin/users.ts` (Kelola user: list, create invite, update role/perms, revoke sessions, delete user)
 6. `api/admin/cloudinary/signature.ts` (Generate signature aman Cloudinary)
 7. `api/admin/security/stats.ts` (Metrik audit & security events)
-8. `api/auth/[action].ts` (Login, logout, me, verify invitation, activate, reset password)
-9. `api/me/[resource].ts` (Sesi aktif & profil akun pengurus sendiri)
-10. `api/public/[resource].ts` (Endpoint publik untuk beranda, pengurus, sejarah, galeri, program)
+8. `api/auth.ts` (Login, logout, me, verify invitation, activate, reset password)
+9. `api/me.ts` (Sesi aktif & profil akun pengurus sendiri)
+10. `api/public.ts` (Endpoint publik untuk beranda, pengurus, sejarah, galeri, program)
 
 ---
 

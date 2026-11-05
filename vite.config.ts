@@ -24,21 +24,21 @@ function apiDevPlugin(): Plugin {
             filePath = directFile;
           }
 
-          // 2. Cek api/auth/[action].ts
-          if (!filePath && pathname.startsWith('/api/auth/')) {
-            const actionFile = path.resolve(__dirname, './api/auth/[action].ts');
+          // 2. Cek api/auth.ts
+          if (!filePath && (pathname === '/api/auth' || pathname.startsWith('/api/auth/'))) {
+            const actionFile = path.resolve(__dirname, './api/auth.ts');
             if (fs.existsSync(actionFile)) filePath = actionFile;
           }
 
-          // 3. Cek api/public/[resource].ts
-          if (!filePath && pathname.startsWith('/api/public/')) {
-            const resourceFile = path.resolve(__dirname, './api/public/[resource].ts');
+          // 3. Cek api/public.ts
+          if (!filePath && (pathname === '/api/public' || pathname.startsWith('/api/public/'))) {
+            const resourceFile = path.resolve(__dirname, './api/public.ts');
             if (fs.existsSync(resourceFile)) filePath = resourceFile;
           }
 
-          // Cek api/me/[resource].ts
-          if (!filePath && pathname.startsWith('/api/me/')) {
-            const meFile = path.resolve(__dirname, './api/me/[resource].ts');
+          // Cek api/me.ts
+          if (!filePath && (pathname === '/api/me' || pathname.startsWith('/api/me/'))) {
+            const meFile = path.resolve(__dirname, './api/me.ts');
             if (fs.existsSync(meFile)) filePath = meFile;
           }
 

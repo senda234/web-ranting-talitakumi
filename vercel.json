@@ -1,16 +1,16 @@
 {
   "rewrites": [
     {
-      "source": "/api/auth/:action",
-      "destination": "/api/auth/[action]?action=:action"
+      "source": "/api/auth/:action*",
+      "destination": "/api/auth?action=:action*"
     },
     {
-      "source": "/api/me/:resource",
-      "destination": "/api/me/[resource]?resource=:resource"
+      "source": "/api/me/:resource*",
+      "destination": "/api/me?resource=:resource*"
     },
     {
-      "source": "/api/public/:resource",
-      "destination": "/api/public/[resource]?resource=:resource"
+      "source": "/api/public/:resource*",
+      "destination": "/api/public?resource=:resource*"
     },
     {
       "source": "/api/cloudinary/sign",

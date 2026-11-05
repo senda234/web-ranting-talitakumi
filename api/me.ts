@@ -1,10 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import bcrypt from 'bcryptjs';
-import prisma from '../_lib/prisma';
-import { getSession } from '../_lib/auth';
-import { parseJsonBody } from '../_lib/body';
-import { sendSuccess, sendError } from '../_lib/response';
-import { setSecurityHeaders, getClientInfo, logSecurityEvent, revokeSession } from '../_lib/security';
+import prisma from './_lib/prisma';
+import { getSession } from './_lib/auth';
+import { parseJsonBody } from './_lib/body';
+import { sendSuccess, sendError } from './_lib/response';
+import { setSecurityHeaders, getClientInfo, logSecurityEvent, revokeSession } from './_lib/security';
 
 /**
  * Endpoint Terpadu Pengguna Sendiri (/api/me/profile & /api/me/sessions)
@@ -22,9 +22,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const queryResource = url.searchParams.get('resource');
   const pathResource = url.pathname.split('/').filter(Boolean).pop();
   const resource =
-    queryResource && queryResource !== '[resource]'
+    queryResource && queryResource !== 'me' && queryResource !== '[resource]'
       ? queryResource
-      : pathResource && pathResource !== '[resource]'
+      : pathResource && pathResource !== 'me' && pathResource !== '[resource]'
       ? pathResource
       : queryResource;
   const method = req.method;
@@ -198,4 +198,3 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 500, 'Terjadi kesalahan sistem', err.message);
   }
 }
-

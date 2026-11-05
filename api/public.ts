@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import prisma from '../_lib/prisma';
-import { sendSuccess, sendError } from '../_lib/response';
+import prisma from './_lib/prisma';
+import { sendSuccess, sendError } from './_lib/response';
 
 /**
  * Consolidated Public API Endpoint:
@@ -15,9 +15,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const queryResource = url.searchParams.get('resource');
   const pathResource = url.pathname.split('/').filter(Boolean).pop();
   const resource =
-    queryResource && queryResource !== '[resource]'
+    queryResource && queryResource !== 'public' && queryResource !== '[resource]'
       ? queryResource
-      : pathResource && pathResource !== '[resource]'
+      : pathResource && pathResource !== 'public' && pathResource !== '[resource]'
       ? pathResource
       : queryResource;
 
@@ -173,4 +173,3 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return sendError(res, 500, `Gagal memuat data resource: ${resource}`, err.message);
   }
 }
-
