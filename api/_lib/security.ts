@@ -52,18 +52,26 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
  * Ambil Client IP dan User Agent yang disanitasi
  */
 export function getClientInfo(req: IncomingMessage) {
-  const forwarded = req.headers['x-forwarded-for'];
-  let ip = '127.0.0.1';
-  if (typeof forwarded === 'string') {
-    ip = forwarded.split(',')[0].trim();
-  } else if (req.socket.remoteAddress) {
-    ip = req.socket.remoteAddress;
+  try {
+    const forwarded = req.headers?.['x-forwarded-for'];
+    let ip = '127.0.0.1';
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+      ip = forwarded.split(',')[0].trim();
+    } else if (Array.isArray(forwarded) && forwarded.length > 0) {
+      ip = String(forwarded[0]).trim();
+    } else if (req.headers?.['x-real-ip']) {
+      ip = String(req.headers['x-real-ip']).trim();
+    } else if (req.socket?.remoteAddress) {
+      ip = req.socket.remoteAddress;
+    }
+
+    const rawUserAgent = req.headers?.['user-agent'] || 'Unknown Agent';
+    const userAgent = (typeof rawUserAgent === 'string' ? rawUserAgent : 'Unknown Agent').substring(0, 200);
+
+    return { ip, userAgent };
+  } catch {
+    return { ip: '127.0.0.1', userAgent: 'Unknown Agent' };
   }
-
-  const rawUserAgent = req.headers['user-agent'] || 'Unknown Agent';
-  const userAgent = rawUserAgent.substring(0, 200);
-
-  return { ip, userAgent };
 }
 
 /**

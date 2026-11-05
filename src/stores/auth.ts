@@ -79,7 +79,12 @@ export const useAuthStore = defineStore('auth', () => {
         body: JSON.stringify({ email: cleanEmail, password }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = { message: `Respon server tidak valid (HTTP ${res.status}).` };
+      }
 
       if (res.ok && (data.success || data.user || data.data?.user)) {
         user.value = data.data?.user || data.user;
@@ -89,7 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       return {
         success: false,
-        message: data.message || data.error || 'Email atau kata sandi tidak sesuai.',
+        message: data.message || data.error || (res.status === 401 ? 'Email atau kata sandi tidak sesuai.' : `Gagal masuk (HTTP ${res.status}). Silakan coba lagi.`),
       };
     } catch {
       return {

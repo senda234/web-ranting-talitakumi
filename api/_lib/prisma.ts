@@ -5,9 +5,26 @@ declare global {
   var prismaGlobal: PrismaClient | undefined;
 }
 
+const DEFAULT_DATABASE_URL =
+  'postgresql://neondb_owner:npg_gBNvG0FVP8Oa@ep-winter-recipe-b337iax8-pooler.c-4.ap-southeast-1.aws.neon.tech/talitakumi?sslmode=require';
+
+const effectiveDbUrl = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
+
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = effectiveDbUrl;
+}
+if (!process.env.DATABASE_URL_UNPOOLED) {
+  process.env.DATABASE_URL_UNPOOLED = effectiveDbUrl;
+}
+
 export const prisma =
   globalThis.prismaGlobal ||
   new PrismaClient({
+    datasources: {
+      db: {
+        url: effectiveDbUrl,
+      },
+    },
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
 
@@ -16,4 +33,3 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export default prisma;
-

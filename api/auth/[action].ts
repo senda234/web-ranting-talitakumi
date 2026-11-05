@@ -25,7 +25,8 @@ import { sendSuccess, sendError } from '../_lib/response';
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   setSecurityHeaders(res);
 
-  const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+  try {
+    const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
   const queryAction = url.searchParams.get('action');
   const pathAction = url.pathname.split('/').filter(Boolean).pop();
   const action =
@@ -419,5 +420,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
   }
 
-  return sendError(res, 404, 'Endpoint auth tidak ditemukan');
+    return sendError(res, 404, `Endpoint auth '${action}' tidak ditemukan`);
+  } catch (err: any) {
+    console.error('[API AUTH CRITICAL ERROR]:', err);
+    return sendError(
+      res,
+      500,
+      `Terjadi kesalahan pada server autentikasi: ${err?.message || 'Internal Server Error'}`,
+      err?.stack
+    );
+  }
 }
