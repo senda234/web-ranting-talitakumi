@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { ref, onMounted, computed } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 import {
   LayoutDashboard,
   Images,
@@ -14,10 +14,17 @@ import {
   X,
   User as UserIcon,
 } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
-const router = useRouter();
+const authStore = useAuthStore();
 const isSidebarOpen = ref(false);
+
+onMounted(() => {
+  if (!authStore.user) {
+    authStore.checkSession();
+  }
+});
 
 const navItems = [
   { name: 'Ringkasan', to: '/admin', icon: LayoutDashboard },
@@ -28,6 +35,33 @@ const navItems = [
   { name: 'Pengaturan', to: '/admin/pengaturan', icon: Settings },
 ];
 
+const filteredNavItems = computed(() => {
+  return navItems.filter((item) => {
+    if (item.to === '/admin/pengaturan') {
+      return authStore.canManageSettings;
+    }
+    if (authStore.isEditor) {
+      if (item.to === '/admin/galeri') return authStore.hasPagePermission('gallery');
+      if (item.to === '/admin/pengurus') return authStore.hasPagePermission('officers');
+      if (item.to === '/admin/program') return authStore.hasPagePermission('programs');
+      if (item.to === '/admin/halaman') return authStore.hasPagePermission('pages');
+    }
+    return true;
+  });
+});
+
+const roleLabel = computed(() => {
+  if (authStore.isSuperAdmin) return 'Super Admin';
+  if (authStore.isAdmin) return 'Admin';
+  return 'Editor';
+});
+
+const roleClass = computed(() => {
+  if (authStore.isSuperAdmin) return 'super';
+  if (authStore.isAdmin) return 'admin';
+  return 'editor';
+});
+
 function isActive(path: string) {
   if (path === '/admin') {
     return route.path === '/admin';
@@ -36,8 +70,7 @@ function isActive(path: string) {
 }
 
 function handleLogout() {
-  localStorage.removeItem('talitakumi_admin_auth');
-  router.push('/admin/login');
+  authStore.logout();
 }
 </script>
 
@@ -88,7 +121,7 @@ function handleLogout() {
       <nav class="sidebar-nav" aria-label="Navigasi Menu Admin">
         <div class="nav-label">Menu Utama</div>
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in filteredNavItems"
           :key="item.to"
           :to="item.to"
           class="sidebar-link"
@@ -101,6 +134,10 @@ function handleLogout() {
       </nav>
 
       <div class="sidebar-footer">
+        <RouterLink to="/admin/profil" class="footer-link" @click="isSidebarOpen = false">
+          <UserIcon :size="18" />
+          <span>Profil & Kata Sandi</span>
+        </RouterLink>
         <a href="/" target="_blank" class="footer-link">
           <ExternalLink :size="18" />
           <span>Lihat Situs Publik</span>
@@ -124,10 +161,15 @@ function handleLogout() {
             <ExternalLink :size="16" />
             <span>Lihat Situs</span>
           </a>
-          <div class="user-pill">
+          <RouterLink to="/admin/profil" class="user-pill user-pill-link" title="Buka Profil & Ganti Sandi">
             <UserIcon :size="16" class="user-icon" />
-            <span class="user-name">Super Admin</span>
-          </div>
+            <div class="user-details-compact">
+              <span class="user-name">{{ authStore.user?.name || 'Pengurus' }}</span>
+              <span class="user-role-badge" :class="roleClass">
+                {{ roleLabel }}
+              </span>
+            </div>
+          </RouterLink>
           <button type="button" class="logout-icon-btn" @click="handleLogout" title="Keluar">
             <LogOut :size="18" />
           </button>
@@ -436,11 +478,56 @@ function handleLogout() {
   align-items: center;
   gap: 8px;
   background: #f8fafc;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border);
   font-size: 0.85rem;
+  text-decoration: none;
+  color: var(--ink);
+  transition: all 0.2s ease;
+}
+
+.user-pill:hover {
+  background: #edf2f7;
+  border-color: #cbd5e1;
+}
+
+.user-details-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-name {
   font-weight: 600;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.user-role-badge.super {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.user-role-badge.admin {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.user-role-badge.editor {
+  background: #e0f2fe;
+  color: #0369a1;
 }
 
 .user-icon {

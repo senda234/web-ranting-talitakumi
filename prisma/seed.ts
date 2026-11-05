@@ -6,20 +6,32 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Memulai proses seeding data Web Ranting Talitakumi...');
 
-  // 1. Akun Super Admin Awal
+  // 1. Akun Super Admin Awal (Akun web internal, bukan akun Google)
   const passwordHash = await bcrypt.hash('admin123', 10);
+  const primaryEmail = 'admin@talitakumi.org';
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@talitakumi.org' },
-    update: {},
+    where: { email: primaryEmail },
+    update: {
+      name: 'Super Admin Talitakumi',
+      emailNormalized: primaryEmail.toLowerCase(),
+      role: Role.SUPER_ADMIN,
+      authProvider: 'LOCAL',
+      status: 'ACTIVE',
+      isActive: true,
+      passwordHash,
+    },
     create: {
       name: 'Super Admin Talitakumi',
-      email: 'admin@talitakumi.org',
+      email: primaryEmail,
+      emailNormalized: primaryEmail.toLowerCase(),
       passwordHash,
       role: Role.SUPER_ADMIN,
+      authProvider: 'LOCAL',
+      status: 'ACTIVE',
       isActive: true,
     },
   });
-  console.log(`✅ Akun Admin: ${adminUser.email}`);
+  console.log(`✅ Akun Super Admin Web Utama: ${adminUser.email} (Role: SUPER_ADMIN)`);
 
   // 2. Pengaturan Situs (Site Settings)
   const existingSettings = await prisma.siteSetting.findFirst();

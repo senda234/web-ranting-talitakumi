@@ -10,7 +10,7 @@ const COOKIE_NAME = 'talitakumi_session';
 export interface SessionPayload {
   userId: string;
   email: string;
-  role: 'SUPER_ADMIN' | 'EDITOR';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR';
   name: string;
 }
 

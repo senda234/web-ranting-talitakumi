@@ -1,14 +1,104 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useContentStore } from '@/stores/content';
-import { Shield, UserPlus, Clock, Save, Check } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth';
+import {
+  Shield,
+  UserPlus,
+  Save,
+  Check,
+  RefreshCw,
+  Copy,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Clock,
+  Key,
+  Laptop,
+  Smartphone,
+  Globe,
+  Trash2,
+  Lock,
+  UserCheck,
+  UserX,
+  ExternalLink,
+  ChevronRight,
+  ShieldAlert,
+  AlertCircle,
+  Sliders,
+  CheckSquare,
+  Square,
+  Images,
+  Users as UsersIcon,
+  CalendarCheck,
+  FileText,
+  Edit3,
+  Mail,
+  Send,
+  CheckCircle2,
+  Wifi,
+  WifiOff,
+  Unlink,
+  Link as LinkIcon,
+} from 'lucide-vue-next';
+
+interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR';
+  permissions: string[];
+  status: 'PENDING_ACTIVATION' | 'ACTIVE' | 'DISABLED';
+  statusReason?: string | null;
+  activeSessions: number;
+  hasActiveInvitation: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UserSession {
+  id: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  deviceLabel: string;
+  isCurrent: boolean;
+  createdAt: string;
+  lastActiveAt: string;
+  expiresAt: string;
+}
+
+interface SecurityStats {
+  activeUsers: number;
+  pendingUsers: number;
+  disabledUsers: number;
+  activeSessions: number;
+  failedLogins24h: number;
+  recentSecurityEvents: Array<{
+    id: string;
+    eventType: string;
+    userId: string | null;
+    userEmail: string | null;
+    ipAddress: string | null;
+    metadata: any;
+    createdAt: string;
+  }>;
+}
+
+const AVAILABLE_PAGE_PERMISSIONS = [
+  { key: 'gallery', label: 'Galeri & Album', path: '/admin/galeri', icon: Images },
+  { key: 'officers', label: 'Susunan Pengurus', path: '/admin/pengurus', icon: UsersIcon },
+  { key: 'programs', label: 'Program Kerja', path: '/admin/program', icon: CalendarCheck },
+  { key: 'pages', label: 'Teks Halaman', path: '/admin/halaman', icon: FileText },
+];
 
 const contentStore = useContentStore();
+const authStore = useAuthStore();
 const settings = contentStore.settings;
 
-const activeTab = ref<'identity' | 'users' | 'logs'>('identity');
+const activeTab = ref<'identity' | 'users' | 'editor-matrix' | 'security'>('identity');
 const isSaved = ref(false);
 
+// Tab 1 state
 const orgName = ref(settings.organizationName);
 const branchName = ref(settings.branchName);
 const subBranchName = ref(settings.subBranchName);
@@ -26,80 +116,630 @@ function saveIdentity() {
   }, 2500);
 }
 
-// Sample users list for Super Admin
-const users = ref([
-  {
-    id: 'u-1',
-    name: 'Super Admin Talitakumi',
-    email: 'admin@talitakumi.org',
-    role: 'SUPER_ADMIN',
-    isActive: true,
-    lastLogin: 'Baru saja',
-  },
-  {
-    id: 'u-2',
-    name: 'Editor Publikasi',
-    email: 'editor@talitakumi.org',
-    role: 'EDITOR',
-    isActive: true,
-    lastLogin: '3 hari yang lalu',
-  },
-]);
+// Tab 2 & 3 state
+const usersList = ref<AdminUser[]>([]);
+const mySessions = ref<UserSession[]>([]);
+const securityStats = ref<SecurityStats | null>(null);
+const isLoadingData = ref(false);
+const actionError = ref('');
+const actionSuccess = ref('');
 
-// Sample audit logs
-const logs = ref([
-  {
-    id: 'l-1',
-    action: 'Login Admin',
-    user: 'admin@talitakumi.org',
-    time: 'Hari ini, 13:45',
-    details: 'Berhasil masuk ke portal pengurus',
-  },
-  {
-    id: 'l-2',
-    action: 'Pembaruan Teks',
-    user: 'admin@talitakumi.org',
-    time: 'Kemarin, 19:20',
-    details: 'Memperbarui slogan dan pengantar Beranda',
-  },
-  {
-    id: 'l-3',
-    action: 'Publikasi Album',
-    user: 'admin@talitakumi.org',
-    time: '4 Nov 2026',
-    details: 'Menerbitkan album SBC (Study Bible Camp )',
-  },
-]);
+// Modals
+const isInviteModalOpen = ref(false);
+const inviteName = ref('');
+const inviteEmail = ref('');
+const inviteRole = ref<'ADMIN' | 'EDITOR'>('EDITOR');
+const invitePermissions = ref<string[]>(['gallery', 'officers', 'programs', 'pages']);
+const isInviting = ref(false);
+const newlyCreatedInviteUrl = ref('');
+const hasCopiedInvite = ref(false);
+
+const isDisableModalOpen = ref(false);
+const userToDisable = ref<AdminUser | null>(null);
+const disableReason = ref('');
+const isDisabling = ref(false);
+
+// Edit permissions modal for a specific user
+const isPermissionsModalOpen = ref(false);
+const userToEditPermissions = ref<AdminUser | null>(null);
+const tempPermissions = ref<string[]>([]);
+const isSavingPermissions = ref(false);
+
+// Edit User Profile Modal (Superadmin untuk Admin & Editor; Admin untuk Editor)
+const isEditUserModalOpen = ref(false);
+const userToEdit = ref<AdminUser | null>(null);
+const editUserName = ref('');
+const editUserEmail = ref('');
+const editUserRole = ref<'ADMIN' | 'EDITOR'>('EDITOR');
+const editUserPassword = ref('');
+const editUserPermissions = ref<string[]>([]);
+const isSavingUser = ref(false);
+
+function openEditUserModal(user: AdminUser) {
+  userToEdit.value = user;
+  editUserName.value = user.name;
+  editUserEmail.value = user.email;
+  editUserRole.value = user.role === 'ADMIN' ? 'ADMIN' : 'EDITOR';
+  editUserPassword.value = '';
+  editUserPermissions.value = [...(user.permissions || [])];
+  isEditUserModalOpen.value = true;
+}
+
+function toggleEditPermission(permKey: string) {
+  if (editUserPermissions.value.includes(permKey)) {
+    editUserPermissions.value = editUserPermissions.value.filter((k) => k !== permKey);
+  } else {
+    editUserPermissions.value.push(permKey);
+  }
+}
+
+async function handleSaveEditedUser() {
+  if (!userToEdit.value) return;
+  if (!editUserName.value.trim()) {
+    alert('Nama pengurus wajib diisi');
+    return;
+  }
+  if (editUserPassword.value && editUserPassword.value.trim().length < 8) {
+    alert('Kata sandi baru minimal harus 8 karakter');
+    return;
+  }
+
+  isSavingUser.value = true;
+  try {
+    const payload: Record<string, any> = {
+      id: userToEdit.value.id,
+      name: editUserName.value.trim(),
+    };
+
+    if (authStore.isSuperAdmin) {
+      payload.email = editUserEmail.value.trim();
+      payload.role = editUserRole.value;
+    }
+
+    if (editUserPassword.value.trim()) {
+      payload.password = editUserPassword.value.trim();
+    }
+
+    if (editUserRole.value === 'EDITOR') {
+      payload.permissions = editUserPermissions.value;
+    }
+
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal menyimpan perubahan profil');
+      return;
+    }
+
+    isEditUserModalOpen.value = false;
+    actionSuccess.value = `Profil ${editUserName.value} berhasil diperbarui.`;
+    setTimeout(() => (actionSuccess.value = ''), 4000);
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  } finally {
+    isSavingUser.value = false;
+  }
+}
+
+// Editors list for Matrix Tab
+const editorsList = computed(() => {
+  return usersList.value.filter((u) => u.role === 'EDITOR');
+});
+
+// Load data
+async function loadAdminData() {
+  isLoadingData.value = true;
+  actionError.value = '';
+
+  try {
+    // 1. Load users list (Super Admin otomatis disaring backend)
+    const resUsers = await fetch('/api/admin/users');
+    if (resUsers.ok) {
+      const data = await resUsers.json();
+      const rawUsers = data.data?.users || data.users || [];
+      usersList.value = rawUsers.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        permissions: Array.isArray(u.permissions) ? u.permissions : [],
+        status: u.status,
+        statusReason: u.disabledReason,
+        activeSessions: u.activeSessionsCount ?? u._count?.sessions ?? 0,
+        hasActiveInvitation: !!u.hasActiveInvitation,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt || u.createdAt,
+      }));
+    }
+
+    // 2. Load security stats
+    const resStats = await fetch('/api/admin/security/stats');
+    if (resStats.ok) {
+      const data = await resStats.json();
+      const metrics = data.data?.metrics || data.metrics || {};
+      const recentEvents = data.data?.recentEvents || data.recentEvents || [];
+      securityStats.value = {
+        activeUsers: metrics.activeUsersCount ?? 0,
+        pendingUsers: metrics.pendingUsersCount ?? 0,
+        disabledUsers: metrics.disabledUsersCount ?? 0,
+        activeSessions: metrics.activeSessionsCount ?? 0,
+        failedLogins24h: metrics.failedLogins24h ?? 0,
+        recentSecurityEvents: recentEvents.map((evt: any) => ({
+          id: evt.id,
+          eventType: evt.eventType,
+          userId: evt.actorEmail || null,
+          userEmail: evt.actorEmail || null,
+          ipAddress: evt.ipAddress || null,
+          metadata: evt.details ? { detail: evt.details } : null,
+          createdAt: evt.createdAt,
+        })),
+      };
+    }
+
+    // 3. Load my sessions
+    const resSessions = await fetch('/api/me/sessions');
+    if (resSessions.ok) {
+      const data = await resSessions.json();
+      const list = Array.isArray(data.data) ? data.data : (data.sessions || []);
+      mySessions.value = list.map((s: any, idx: number) => ({
+        id: s.id,
+        ipAddress: s.ipAddress,
+        userAgent: s.userAgent,
+        deviceLabel: s.userAgent ? (s.userAgent.includes('Mobile') ? 'Smartphone' : 'Komputer Desktop / Browser') : 'Browser Web',
+        isCurrent: idx === 0,
+        createdAt: s.createdAt,
+        lastActiveAt: s.lastActiveAt,
+        expiresAt: s.expiresAt,
+      }));
+    }
+  } catch (err: any) {
+    actionError.value = 'Sebagian data gagal dimuat dari server: ' + (err.message || 'Error');
+  } finally {
+    isLoadingData.value = false;
+  }
+}
+
+onMounted(() => {
+  loadAdminData();
+});
+
+// User actions
+async function handleInviteUser() {
+  if (!inviteName.value || !inviteEmail.value) {
+    actionError.value = 'Silakan lengkapi nama dan email calon pengurus.';
+    return;
+  }
+
+  isInviting.value = true;
+  actionError.value = '';
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: inviteName.value.trim(),
+        email: inviteEmail.value.trim(),
+        role: inviteRole.value,
+        permissions: inviteRole.value === 'EDITOR' ? invitePermissions.value : [],
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      actionError.value = data.message || data.error || 'Gagal membuat undangan.';
+      return;
+    }
+
+    newlyCreatedInviteUrl.value = data.data?.activationUrl || data.activationUrl;
+    inviteName.value = '';
+    inviteEmail.value = '';
+    invitePermissions.value = ['gallery', 'officers', 'programs', 'pages'];
+    await loadAdminData();
+  } catch (err: any) {
+    actionError.value = 'Gagal memproses undangan: ' + err.message;
+  } finally {
+    isInviting.value = false;
+  }
+}
+
+function copyInviteUrl() {
+  if (!newlyCreatedInviteUrl.value) return;
+  navigator.clipboard.writeText(newlyCreatedInviteUrl.value);
+  hasCopiedInvite.value = true;
+  setTimeout(() => {
+    hasCopiedInvite.value = false;
+  }, 3000);
+}
+
+async function handleChangeRole(user: AdminUser) {
+  if (!authStore.isSuperAdmin) {
+    alert('Hanya Super Admin yang berwenang mengubah peran akun.');
+    return;
+  }
+
+  const newRole = user.role === 'ADMIN' ? 'EDITOR' : 'ADMIN';
+  const confirmMsg =
+    newRole === 'ADMIN'
+      ? `Jadikan ${user.name} sebagai Admin? Akun ini akan memiliki akses penuh ke seluruh modul sistem.`
+      : `Ubah peran ${user.name} menjadi Editor? Anda dapat mengatur izin per halaman untuk akun ini.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  actionError.value = '';
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: user.id,
+        role: newRole,
+        permissions: newRole === 'EDITOR' ? ['gallery', 'officers', 'programs', 'pages'] : [],
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal mengubah peran.');
+      return;
+    }
+
+    actionSuccess.value = `Peran ${user.name} berhasil diubah menjadi ${newRole === 'ADMIN' ? 'Admin' : 'Editor'}.`;
+    setTimeout(() => (actionSuccess.value = ''), 4000);
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  }
+}
+
+// Open modal to configure individual permissions for Editor
+function openPermissionsModal(user: AdminUser) {
+  userToEditPermissions.value = user;
+  tempPermissions.value = [...(user.permissions || [])];
+  isPermissionsModalOpen.value = true;
+}
+
+function togglePermissionInModal(permKey: string) {
+  if (tempPermissions.value.includes(permKey)) {
+    tempPermissions.value = tempPermissions.value.filter((k) => k !== permKey);
+  } else {
+    tempPermissions.value.push(permKey);
+  }
+}
+
+async function saveIndividualPermissions() {
+  if (!userToEditPermissions.value) return;
+
+  isSavingPermissions.value = true;
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: userToEditPermissions.value.id,
+        permissions: tempPermissions.value,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal menyimpan izin halaman.');
+      return;
+    }
+
+    isPermissionsModalOpen.value = false;
+    actionSuccess.value = `Izin halaman untuk ${userToEditPermissions.value.name} berhasil diperbarui.`;
+    setTimeout(() => (actionSuccess.value = ''), 4000);
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  } finally {
+    isSavingPermissions.value = false;
+  }
+}
+
+// Toggle permission directly from Matrix tab per user
+async function toggleUserPagePermission(editor: AdminUser, permKey: string) {
+  const currentPerms = [...(editor.permissions || [])];
+  const nextPerms = currentPerms.includes(permKey)
+    ? currentPerms.filter((k) => k !== permKey)
+    : [...currentPerms, permKey];
+
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: editor.id,
+        permissions: nextPerms,
+      }),
+    });
+
+    if (res.ok) {
+      editor.permissions = nextPerms;
+    } else {
+      const data = await res.json();
+      alert(data.message || data.error || 'Gagal memperbarui izin.');
+    }
+  } catch (err: any) {
+    alert('Gagal memperbarui izin: ' + err.message);
+  }
+}
+
+function openDisableModal(user: AdminUser) {
+  userToDisable.value = user;
+  disableReason.value = '';
+  isDisableModalOpen.value = true;
+}
+
+async function confirmDisableUser() {
+  if (!userToDisable.value) return;
+
+  isDisabling.value = true;
+  actionError.value = '';
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: userToDisable.value.id,
+        status: 'DISABLED',
+        disabledReason: disableReason.value.trim() || 'Dinonaktifkan oleh administrator',
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal menonaktifkan pengguna.');
+      return;
+    }
+
+    isDisableModalOpen.value = false;
+    userToDisable.value = null;
+    actionSuccess.value = 'Akun pengguna berhasil dinonaktifkan dan seluruh sesi aktif telah dicabut.';
+    setTimeout(() => (actionSuccess.value = ''), 4000);
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  } finally {
+    isDisabling.value = false;
+  }
+}
+
+async function handleEnableUser(user: AdminUser) {
+  if (!confirm(`Aktifkan kembali akun ${user.name}? Pengguna ini akan dapat masuk kembali dengan kredensialnya.`)) {
+    return;
+  }
+
+  actionError.value = '';
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: user.id, status: 'ACTIVE' }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal mengaktifkan pengguna.');
+      return;
+    }
+
+    actionSuccess.value = `Akun ${user.name} telah diaktifkan kembali.`;
+    setTimeout(() => (actionSuccess.value = ''), 4000);
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  }
+}
+
+async function handleRevokeUserSessions(user: AdminUser) {
+  if (!confirm(`Cabut seluruh sesi aktif untuk ${user.name}? Pengguna ini akan dipaksa logout dari semua perangkat.`)) {
+    return;
+  }
+
+  actionError.value = '';
+  try {
+    const res = await fetch(`/api/admin/users?userId=${encodeURIComponent(user.id)}`, {
+      method: 'DELETE',
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal mencabut sesi.');
+      return;
+    }
+
+    actionSuccess.value = `Seluruh sesi untuk ${user.name} berhasil dicabut.`;
+    setTimeout(() => (actionSuccess.value = ''), 4000);
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  }
+}
+
+async function handleResendInvite(user: AdminUser) {
+  isInviting.value = true;
+  actionError.value = '';
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions || [],
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Gagal memperbarui undangan.');
+      return;
+    }
+
+    newlyCreatedInviteUrl.value = data.data?.activationUrl || data.activationUrl;
+    isInviteModalOpen.value = true;
+    await loadAdminData();
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  } finally {
+    isInviting.value = false;
+  }
+}
+
+// Session actions
+async function handleRevokeMySession(sessionId: string, isCurrent: boolean) {
+  const confirmMsg = isCurrent
+    ? 'Cabut sesi ini? Anda akan langsung keluar dan diarahkan ke halaman login.'
+    : 'Cabut sesi login perangkat ini?';
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const res = await fetch(`/api/me/sessions?sessionId=${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+    });
+
+    if (res.ok) {
+      if (isCurrent) {
+        authStore.logout();
+      } else {
+        await loadAdminData();
+      }
+    } else {
+      const data = await res.json();
+      alert(data.message || data.error || 'Gagal mencabut sesi.');
+    }
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  }
+}
+
+async function handleRevokeOtherSessions() {
+  if (!confirm('Cabut semua sesi perangkat lain? Hanya sesi browser ini yang akan tetap aktif.')) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/me/sessions?revokeOthers=true', {
+      method: 'DELETE',
+    });
+
+    if (res.ok) {
+      actionSuccess.value = 'Semua sesi lain berhasil dicabut.';
+      setTimeout(() => (actionSuccess.value = ''), 4000);
+      await loadAdminData();
+    } else {
+      const data = await res.json();
+      alert(data.message || data.error || 'Gagal mencabut sesi lain.');
+    }
+  } catch (err: any) {
+    alert('Terjadi kesalahan: ' + err.message);
+  }
+}
+
+function formatDate(isoString: string): string {
+  if (!isoString) return '-';
+  try {
+    const date = new Date(isoString);
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  } catch {
+    return isoString;
+  }
+}
+
+function getPermissionLabel(key: string): string {
+  const match = AVAILABLE_PAGE_PERMISSIONS.find((p) => p.key === key);
+  return match ? match.label : key;
+}
 </script>
 
 <template>
   <div class="settings-admin">
     <div class="admin-page-header">
       <div>
-        <h1 class="page-title">Pengaturan Sistem</h1>
-        <p class="page-desc">Kelola identitas organisasi, akses pengguna, dan rekam aktivitas.</p>
+        <h1 class="page-title">Pengaturan Sistem & Hak Akses</h1>
+        <p class="page-desc">Kelola identitas organisasi, akun pengurus, matriks izin editor per pengguna, dan audit keamanan.</p>
       </div>
+
+      <button
+        type="button"
+        class="btn btn-secondary reload-btn"
+        @click="loadAdminData"
+        :disabled="isLoadingData"
+        title="Muat ulang data terbaru dari Neon"
+      >
+        <RefreshCw :size="16" :class="{ 'spin-anim': isLoadingData }" />
+        <span>Segarkan</span>
+      </button>
     </div>
 
-    <!-- TABS -->
+    <!-- GLOBAL BANNERS -->
+    <div v-if="actionSuccess" class="alert-box success-alert" role="alert">
+      <CheckCircle :size="18" />
+      <span>{{ actionSuccess }}</span>
+    </div>
+
+    <div v-if="actionError" class="alert-box error-alert" role="alert">
+      <AlertCircle :size="18" />
+      <span>{{ actionError }}</span>
+    </div>
+
+    <!-- TABS NAVIGATION -->
     <div class="tabs-nav card">
-      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'identity' }"
-        @click="activeTab = 'identity'">
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'is-active': activeTab === 'identity' }"
+        @click="activeTab = 'identity'"
+      >
         <span>Identitas Lembaga</span>
       </button>
-      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'users' }"
-        @click="activeTab = 'users'">
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'is-active': activeTab === 'users' }"
+        @click="activeTab = 'users'"
+      >
         <span>Pengguna & Hak Akses</span>
+        <span v-if="usersList.length" class="tab-badge">{{ usersList.length }}</span>
       </button>
-      <button type="button" class="tab-btn" :class="{ 'is-active': activeTab === 'logs' }" @click="activeTab = 'logs'">
-        <span>Log Aktivitas</span>
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'is-active': activeTab === 'editor-matrix' }"
+        @click="activeTab = 'editor-matrix'"
+      >
+        <span>Matriks Izin Editor (Per Pengguna)</span>
+        <span v-if="editorsList.length" class="tab-badge info">{{ editorsList.length }}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'is-active': activeTab === 'security' }"
+        @click="activeTab = 'security'"
+      >
+        <span>Audit & Dasbor Keamanan</span>
       </button>
     </div>
 
     <!-- TAB 1: IDENTITAS -->
     <section v-if="activeTab === 'identity'" class="tab-pane card">
       <div class="pane-head">
-        <h2 class="pane-title">Identitas Organisasi Gereja</h2>
+        <div>
+          <h2 class="pane-title">Identitas Organisasi Gereja</h2>
+          <p class="pane-desc">Nama resmi lembaga yang ditampilkan pada header dan footer situs publik.</p>
+        </div>
         <button type="button" class="btn btn-primary" @click="saveIdentity">
           <Check v-if="isSaved" :size="18" />
           <Save v-else :size="18" />
@@ -125,72 +765,749 @@ const logs = ref([
       </div>
     </section>
 
-    <!-- TAB 2: PENGGUNA -->
+    <!-- TAB 2: PENGGUNA & HAK AKSES -->
     <section v-if="activeTab === 'users'" class="tab-pane card">
       <div class="pane-head">
         <div>
           <h2 class="pane-title">Akun Pengurus & Hak Akses</h2>
-          <p class="pane-desc">Hanya akun terdaftar yang dapat masuk. Pendaftaran mandiri ditutup.</p>
+          <p class="pane-desc">
+            Sistem tertutup (invite-only). Super Admin disembunyikan dari tabel untuk keamanan sistem. Admin memiliki akses penuh, sedangkan Editor memiliki izin per halaman yang dapat disesuaikan.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="isInviteModalOpen = true"
+        >
+          <UserPlus :size="18" />
+          <span>Undang Pengguna Baru</span>
+        </button>
+      </div>
+
+      <!-- INVITATION URL BOX (IF GENERATED) -->
+      <div v-if="newlyCreatedInviteUrl" class="invite-success-banner card">
+        <div class="invite-badge">
+          <Key :size="20" />
+        </div>
+        <div class="invite-content">
+          <h4 class="invite-title">Tautan Aktivasi Pengurus Berhasil Dibuat</h4>
+          <p class="invite-desc">
+            Berikan tautan ini kepada calon pengurus. Tautan hanya dapat digunakan 1 kali dan kedaluwarsa dalam 24 jam.
+          </p>
+          <div class="invite-input-row">
+            <input type="text" readonly :value="newlyCreatedInviteUrl" class="form-input invite-url-field" />
+            <button type="button" class="btn btn-secondary" @click="copyInviteUrl">
+              <CheckCircle v-if="hasCopiedInvite" :size="16" class="text-success" />
+              <Copy v-else :size="16" />
+              <span>{{ hasCopiedInvite ? 'Tersalin!' : 'Salin Tautan' }}</span>
+            </button>
+            <button type="button" class="btn btn-ghost" @click="newlyCreatedInviteUrl = ''" title="Tutup">
+              ✕
+            </button>
+          </div>
         </div>
       </div>
 
+      <!-- USERS TABLE -->
       <div class="users-table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Nama Pengguna</th>
+              <th>Pengurus</th>
               <th>Email</th>
               <th>Peran</th>
+              <th>Izin Halaman</th>
               <th>Status</th>
-              <th>Login Terakhir</th>
+              <th>Sesi Aktif</th>
+              <th class="text-right">Tindakan</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in users" :key="user.id">
+            <tr v-if="usersList.length === 0">
+              <td colspan="7" class="empty-cell">
+                <div v-if="isLoadingData" class="empty-state">
+                  <RefreshCw :size="24" class="spin-anim" />
+                  <span>Memuat data pengguna dari database Neon...</span>
+                </div>
+                <div v-else class="empty-state">
+                  <span>Tidak ada data pengguna Admin/Editor. (Akun Super Admin disembunyikan).</span>
+                </div>
+              </td>
+            </tr>
+
+            <tr v-for="user in usersList" :key="user.id">
               <td>
-                <strong>{{ user.name }}</strong>
+                <div class="user-meta-cell">
+                  <div class="user-avatar-badge">
+                    {{ user.name.slice(0, 2).toUpperCase() }}
+                  </div>
+                  <div>
+                    <div class="user-name-strong">{{ user.name }}</div>
+                    <div v-if="user.id === authStore.user?.id" class="current-user-tag">Akun Anda</div>
+                  </div>
+                </div>
               </td>
               <td>{{ user.email }}</td>
               <td>
-                <span class="role-badge" :class="user.role === 'SUPER_ADMIN' ? 'super' : 'editor'">
-                  {{ user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Editor' }}
+                <span class="role-badge" :class="user.role === 'ADMIN' ? 'admin' : 'editor'">
+                  {{ user.role === 'ADMIN' ? 'Admin' : 'Editor' }}
                 </span>
               </td>
               <td>
-                <span class="status-badge active">Aktif</span>
+                <!-- JIKA ADMIN: AKSES PENUH -->
+                <span v-if="user.role === 'ADMIN'" class="perm-full-tag">
+                  Semua Halaman (Akses Penuh)
+                </span>
+                <!-- JIKA EDITOR: TAMPILKAN PIL PERIZINAN -->
+                <div v-else class="perm-tags-list">
+                  <span
+                    v-for="pKey in user.permissions"
+                    :key="pKey"
+                    class="perm-tag"
+                  >
+                    {{ getPermissionLabel(pKey) }}
+                  </span>
+                  <span v-if="!user.permissions || user.permissions.length === 0" class="perm-tag none">
+                    Belum ada izin halaman
+                  </span>
+                </div>
               </td>
-              <td class="text-muted">{{ user.lastLogin }}</td>
+              <td>
+                <span v-if="user.status === 'ACTIVE'" class="status-badge active">
+                  <span class="status-dot green"></span> Aktif
+                </span>
+                <span v-else-if="user.status === 'PENDING_ACTIVATION'" class="status-badge pending">
+                  <span class="status-dot yellow"></span> Menunggu Aktivasi
+                </span>
+                <span v-else class="status-badge disabled" :title="user.statusReason || 'Akun dinonaktifkan'">
+                  <span class="status-dot red"></span> Dinonaktifkan
+                </span>
+              </td>
+              <td>
+                <span class="sessions-count" :class="{ 'has-sessions': user.activeSessions > 0 }">
+                  {{ user.activeSessions }} sesi
+                </span>
+              </td>
+              <td class="text-right">
+                <div class="table-actions">
+                  <!-- Edit Profil: Super Admin bisa edit Admin & Editor; Admin bisa edit Editor (termasuk kata sandinya) -->
+                  <button
+                    v-if="authStore.isSuperAdmin || (authStore.isAdmin && user.role === 'EDITOR')"
+                    type="button"
+                    class="action-btn"
+                    @click="openEditUserModal(user)"
+                    :title="`Edit profil & kata sandi ${user.name}`"
+                  >
+                    <Edit3 :size="15" />
+                    <span>Edit Profil</span>
+                  </button>
+
+                  <!-- Atur Izin Halaman jika Editor -->
+                  <button
+                    v-if="user.role === 'EDITOR'"
+                    type="button"
+                    class="action-btn info"
+                    @click="openPermissionsModal(user)"
+                    title="Atur izin halaman khusus pengguna ini"
+                  >
+                    <Sliders :size="15" />
+                    <span>Izin Halaman</span>
+                  </button>
+
+                  <!-- Change role (Hanya Super Admin) -->
+                  <button
+                    v-if="authStore.isSuperAdmin"
+                    type="button"
+                    class="action-btn"
+                    @click="handleChangeRole(user)"
+                    :title="user.role === 'ADMIN' ? 'Turunkan ke Editor' : 'Jadikan Admin'"
+                  >
+                    <Shield :size="15" />
+                    <span>{{ user.role === 'ADMIN' ? 'Jadikan Editor' : 'Jadikan Admin' }}</span>
+                  </button>
+
+                  <!-- Revoke sessions -->
+                  <button
+                    v-if="user.activeSessions > 0"
+                    type="button"
+                    class="action-btn warning"
+                    @click="handleRevokeUserSessions(user)"
+                    title="Cabut semua sesi pengguna ini"
+                  >
+                    <Lock :size="15" />
+                    <span>Cabut Sesi</span>
+                  </button>
+
+                  <!-- Resend invite if pending -->
+                  <button
+                    v-if="user.status === 'PENDING_ACTIVATION'"
+                    type="button"
+                    class="action-btn"
+                    @click="handleResendInvite(user)"
+                    title="Buat ulang tautan aktivasi"
+                  >
+                    <Key :size="15" />
+                    <span>Tautan Baru</span>
+                  </button>
+
+                  <!-- Disable / Enable -->
+                  <button
+                    v-if="user.status === 'ACTIVE'"
+                    type="button"
+                    class="action-btn danger"
+                    @click="openDisableModal(user)"
+                    title="Nonaktifkan akun"
+                    :disabled="user.id === authStore.user?.id"
+                  >
+                    <UserX :size="15" />
+                    <span>Nonaktifkan</span>
+                  </button>
+                  <button
+                    v-else-if="user.status === 'DISABLED'"
+                    type="button"
+                    class="action-btn success"
+                    @click="handleEnableUser(user)"
+                    title="Aktifkan kembali akun"
+                  >
+                    <UserCheck :size="15" />
+                    <span>Aktifkan</span>
+                  </button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- TAB 3: LOG AKTIVITAS -->
-    <section v-if="activeTab === 'logs'" class="tab-pane card">
+    <!-- TAB 3: MATRIKS IZIN EDITOR PER PENGGUNA -->
+    <section v-if="activeTab === 'editor-matrix'" class="tab-pane card">
       <div class="pane-head">
         <div>
-          <h2 class="pane-title">Log Audit Aktivitas</h2>
-          <p class="pane-desc">Catatan perubahan data, login, dan aksi penting admin.</p>
+          <h2 class="pane-title">Matriks Izin Halaman Editor (Per Pengguna)</h2>
+          <p class="pane-desc">
+            Super Admin dan Admin memiliki akses penuh ke seluruh halaman secara otomatis. Di bawah ini adalah konfigurasi izin per halaman khusus akun <strong>Editor</strong>. Anda dapat mengaktifkan atau menonaktifkan akses halaman untuk masing-masing pengguna secara mandiri.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          @click="loadAdminData"
+          :disabled="isLoadingData"
+        >
+          <RefreshCw :size="14" :class="{ 'spin-anim': isLoadingData }" />
+          <span>Segarkan Data</span>
+        </button>
+      </div>
+
+      <!-- EMPTY STATE JIKA BELUM ADA EDITOR -->
+      <div v-if="editorsList.length === 0" class="empty-matrix-card card">
+        <Sliders :size="32" class="text-muted" />
+        <h4 class="empty-matrix-title">Belum Ada Pengguna Ber-peran Editor</h4>
+        <p class="empty-matrix-desc">
+          Seluruh pengguna saat ini ber-peran Admin (akses penuh). Tambahkan pengguna dengan peran Editor untuk mengatur perizinan per halaman.
+        </p>
+        <button type="button" class="btn btn-primary" @click="isInviteModalOpen = true">
+          <UserPlus :size="16" />
+          <span>Undang Editor Baru</span>
+        </button>
+      </div>
+
+      <!-- TABEL MATRIKS PER USER EDITOR -->
+      <div v-else class="users-table-wrap">
+        <table class="data-table matrix-per-user-table">
+          <thead>
+            <tr>
+              <th>Pengguna (Editor)</th>
+              <th>Status</th>
+              <th v-for="page in AVAILABLE_PAGE_PERMISSIONS" :key="page.key" class="text-center">
+                <div class="th-perm-head">
+                  <component :is="page.icon" :size="15" />
+                  <span>{{ page.label }}</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="editor in editorsList" :key="editor.id">
+              <td>
+                <div class="user-meta-cell">
+                  <div class="user-avatar-badge">
+                    {{ editor.name.slice(0, 2).toUpperCase() }}
+                  </div>
+                  <div>
+                    <div class="user-name-strong">{{ editor.name }}</div>
+                    <div class="user-email-muted">{{ editor.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span v-if="editor.status === 'ACTIVE'" class="status-badge active">Aktif</span>
+                <span v-else-if="editor.status === 'PENDING_ACTIVATION'" class="status-badge pending">Menunggu</span>
+                <span v-else class="status-badge disabled">Nonaktif</span>
+              </td>
+              <!-- CHECKBOX TOGGLE PER HALAMAN -->
+              <td
+                v-for="page in AVAILABLE_PAGE_PERMISSIONS"
+                :key="page.key"
+                class="text-center perm-toggle-cell"
+              >
+                <button
+                  type="button"
+                  class="toggle-perm-btn"
+                  :class="{ 'is-active': editor.permissions?.includes(page.key) }"
+                  @click="toggleUserPagePermission(editor, page.key)"
+                  :title="`Klik untuk ${editor.permissions?.includes(page.key) ? 'mencabut' : 'memberikan'} akses ${page.label}`"
+                >
+                  <CheckSquare v-if="editor.permissions?.includes(page.key)" :size="18" class="text-success" />
+                  <Square v-else :size="18" class="text-muted" />
+                  <span class="perm-status-text">
+                    {{ editor.permissions?.includes(page.key) ? 'Diizinkan' : 'Tutup' }}
+                  </span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: AUDIT & DASBOR KEAMANAN -->
+    <section v-if="activeTab === 'security'" class="tab-pane card">
+      <div class="pane-head">
+        <div>
+          <h2 class="pane-title">Dasbor Keamanan & Audit Log</h2>
+          <p class="pane-desc">
+            Pemantauan sesi aktif, integritas autentikasi, rate limit, dan jejak aktivitas penting pengurus.
+          </p>
         </div>
       </div>
 
-      <div class="logs-list">
-        <div v-for="log in logs" :key="log.id" class="log-item">
-          <div class="log-icon-wrap">
-            <Clock :size="18" />
+      <!-- SECURITY STATS METRICS -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Pengguna Aktif</div>
+          <div class="metric-value text-success">{{ securityStats?.activeUsers ?? '-' }}</div>
+          <div class="metric-desc">Akun berstatus aktif di sistem</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Menunggu Aktivasi</div>
+          <div class="metric-value text-warning">{{ securityStats?.pendingUsers ?? '-' }}</div>
+          <div class="metric-desc">Undangan belum diaktivasi</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Akun Dinonaktifkan</div>
+          <div class="metric-value text-danger">{{ securityStats?.disabledUsers ?? '-' }}</div>
+          <div class="metric-desc">Akses ditutup oleh admin</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Total Sesi Aktif</div>
+          <div class="metric-value text-primary">{{ securityStats?.activeSessions ?? '-' }}</div>
+          <div class="metric-desc">Sesi database Neon yang valid</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Percobaan Gagal (24 Jam)</div>
+          <div class="metric-value" :class="(securityStats?.failedLogins24h ?? 0) > 5 ? 'text-danger' : 'text-muted'">
+            {{ securityStats?.failedLogins24h ?? 0 }}
           </div>
-          <div class="log-info">
-            <div class="log-line">
-              <strong class="log-action">{{ log.action }}</strong>
-              <span class="log-user">oleh {{ log.user }}</span>
+          <div class="metric-desc">Dipantau oleh rate limiter</div>
+        </div>
+      </div>
+
+      <!-- MY SESSIONS SECTION -->
+      <div class="sub-section">
+        <div class="sub-section-head">
+          <div>
+            <h3 class="sub-title">Sesi Login Akun Anda</h3>
+            <p class="sub-desc">Daftar perangkat yang saat ini terautentikasi dengan akun Anda.</p>
+          </div>
+          <button
+            v-if="mySessions.length > 1"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="handleRevokeOtherSessions"
+          >
+            <Lock :size="15" />
+            <span>Cabut Semua Sesi Lain</span>
+          </button>
+        </div>
+
+        <div class="sessions-list">
+          <div
+            v-for="session in mySessions"
+            :key="session.id"
+            class="session-card"
+            :class="{ 'is-current': session.isCurrent }"
+          >
+            <div class="session-icon">
+              <Laptop v-if="session.deviceLabel.toLowerCase().includes('desktop') || session.deviceLabel.toLowerCase().includes('windows') || session.deviceLabel.toLowerCase().includes('mac')" :size="20" />
+              <Smartphone v-else :size="20" />
             </div>
-            <p class="log-details">{{ log.details }}</p>
+            <div class="session-info">
+              <div class="session-device-line">
+                <strong>{{ session.deviceLabel }}</strong>
+                <span v-if="session.isCurrent" class="current-session-badge">Sesi Ini</span>
+              </div>
+              <div class="session-meta">
+                <span>IP: {{ session.ipAddress || 'Internal' }}</span>
+                <span>•</span>
+                <span>Terakhir aktif: {{ formatDate(session.lastActiveAt) }}</span>
+                <span>•</span>
+                <span>Dibuat: {{ formatDate(session.createdAt) }}</span>
+              </div>
+            </div>
+            <div class="session-action">
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm danger-text"
+                @click="handleRevokeMySession(session.id, session.isCurrent)"
+                :title="session.isCurrent ? 'Keluar dari sesi ini' : 'Cabut sesi ini'"
+              >
+                {{ session.isCurrent ? 'Keluar' : 'Cabut Sesi' }}
+              </button>
+            </div>
           </div>
-          <div class="log-time">{{ log.time }}</div>
+        </div>
+      </div>
+
+      <!-- RECENT SECURITY AUDIT EVENTS -->
+      <div class="sub-section">
+        <div class="sub-section-head">
+          <div>
+            <h3 class="sub-title">Peristiwa Keamanan Terbaru (Audit Log)</h3>
+            <p class="sub-desc">Rekam jejak login, perubahan peran, aktivasi, dan tindakan berisiko tinggi.</p>
+          </div>
+        </div>
+
+        <div class="logs-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Peristiwa</th>
+                <th>Subjek</th>
+                <th>IP Address</th>
+                <th>Waktu</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!securityStats?.recentSecurityEvents?.length">
+                <td colspan="5" class="empty-cell">
+                  <div class="empty-state">
+                    <span>Belum ada peristiwa keamanan tercatat.</span>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="evt in securityStats?.recentSecurityEvents" :key="evt.id">
+                <td>
+                  <span
+                    class="event-badge"
+                    :class="{
+                      'badge-red': evt.eventType.includes('FAILED') || evt.eventType.includes('DISABLED') || evt.eventType.includes('LOCKED'),
+                      'badge-green': evt.eventType.includes('SUCCESS') || evt.eventType.includes('ENABLED') || evt.eventType.includes('ACTIVATED'),
+                      'badge-blue': evt.eventType.includes('INVITED') || evt.eventType.includes('CHANGED') || evt.eventType.includes('REVOKED')
+                    }"
+                  >
+                    {{ evt.eventType }}
+                  </span>
+                </td>
+                <td>{{ evt.userEmail || evt.userId || '-' }}</td>
+                <td><code>{{ evt.ipAddress || '-' }}</code></td>
+                <td class="text-muted">{{ formatDate(evt.createdAt) }}</td>
+                <td class="event-meta-cell">
+                  <span v-if="evt.metadata">{{ JSON.stringify(evt.metadata) }}</span>
+                  <span v-else class="text-muted">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
+
+    <!-- MODAL ATUR IZIN HALAMAN KHUSUS PENGGUNA (EDITOR) -->
+    <div v-if="isPermissionsModalOpen" class="modal-backdrop" @click="isPermissionsModalOpen = false">
+      <div class="modal-dialog card" @click.stop>
+        <div class="modal-head">
+          <h3 class="modal-title">Atur Izin Halaman Editor</h3>
+          <button type="button" class="close-btn" @click="isPermissionsModalOpen = false">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-desc">
+            Pilih halaman yang diizinkan untuk <strong>{{ userToEditPermissions?.name }}</strong> ({{ userToEditPermissions?.email }}). Pengguna ini hanya dapat melihat dan mengakses modul yang dicentang.
+          </p>
+
+          <div class="perms-picker-list">
+            <label
+              v-for="page in AVAILABLE_PAGE_PERMISSIONS"
+              :key="page.key"
+              class="perm-picker-item card"
+              :class="{ 'is-selected': tempPermissions.includes(page.key) }"
+            >
+              <input
+                type="checkbox"
+                :checked="tempPermissions.includes(page.key)"
+                @change="togglePermissionInModal(page.key)"
+                class="perm-checkbox"
+              />
+              <div class="perm-picker-info">
+                <div class="perm-picker-title">
+                  <component :is="page.icon" :size="16" />
+                  <span>{{ page.label }}</span>
+                </div>
+                <div class="perm-picker-path">Rute: <code>{{ page.path }}</code></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="isPermissionsModalOpen = false">
+              Batal
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="isSavingPermissions"
+              @click="saveIndividualPermissions"
+            >
+              <Save :size="16" />
+              <span>{{ isSavingPermissions ? 'Menyimpan...' : 'Simpan Izin Pengguna' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL UNDANG PENGGUNA -->
+    <div v-if="isInviteModalOpen" class="modal-backdrop" @click="isInviteModalOpen = false">
+      <div class="modal-dialog card" @click.stop>
+        <div class="modal-head">
+          <h3 class="modal-title">Undang Pengurus Baru</h3>
+          <button type="button" class="close-btn" @click="isInviteModalOpen = false">✕</button>
+        </div>
+
+        <form @submit.prevent="handleInviteUser" class="modal-body">
+          <p class="modal-desc">
+            Undangan akan membuat akun dalam status <em>Menunggu Aktivasi</em>. Tautan aktivasi satu kali pakai akan
+            dihasilkan untuk dikirimkan kepada calon pengurus (masa berlaku 24 jam).
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Nama Lengkap Pengurus</label>
+            <input
+              v-model="inviteName"
+              type="text"
+              required
+              class="form-input"
+              placeholder="Contoh: Yohana Manuhutu"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Alamat Email Resmi</label>
+            <input
+              v-model="inviteEmail"
+              type="email"
+              required
+              class="form-input"
+              placeholder="nama@talitakumi.org"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Peran Pengurus</label>
+            <select v-model="inviteRole" class="form-input">
+              <option value="EDITOR">Editor (Izin Halaman Spesifik Per User)</option>
+              <option v-if="authStore.isSuperAdmin" value="ADMIN">
+                Admin (Akses Penuh: Seluruh Halaman & Pengaturan)
+              </option>
+            </select>
+          </div>
+
+          <!-- CHECKBOX PERIZINAN JIKA EDITOR -->
+          <div v-if="inviteRole === 'EDITOR'" class="form-group perms-section">
+            <label class="form-label">Izin Halaman Akses untuk Editor Ini:</label>
+            <div class="perms-checkboxes-grid">
+              <label
+                v-for="page in AVAILABLE_PAGE_PERMISSIONS"
+                :key="page.key"
+                class="perm-checkbox-item"
+              >
+                <input
+                  type="checkbox"
+                  v-model="invitePermissions"
+                  :value="page.key"
+                />
+                <component :is="page.icon" :size="15" />
+                <span>{{ page.label }}</span>
+              </label>
+            </div>
+            <p class="field-hint">
+              Anda dapat mencentang sebagian atau semua halaman. Izin dapat diubah kapan saja di kemudian hari.
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="isInviteModalOpen = false">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="isInviting">
+              <UserPlus :size="16" />
+              <span>{{ isInviting ? 'Memproses...' : 'Buat Tautan Undangan' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL NONAKTIFKAN AKUN -->
+    <div v-if="isDisableModalOpen" class="modal-backdrop" @click="isDisableModalOpen = false">
+      <div class="modal-dialog card" @click.stop>
+        <div class="modal-head">
+          <h3 class="modal-title danger-text">Nonaktifkan Akun Pengurus</h3>
+          <button type="button" class="close-btn" @click="isDisableModalOpen = false">✕</button>
+        </div>
+
+        <form @submit.prevent="confirmDisableUser" class="modal-body">
+          <p class="modal-desc">
+            Anda akan menonaktifkan akun <strong>{{ userToDisable?.name }}</strong> ({{ userToDisable?.email }}).
+            Seluruh sesi login aktif akan segera dicabut dan pengguna tidak akan dapat mengakses panel admin sampai
+            diaktifkan kembali.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Alasan Penonaktifan</label>
+            <textarea
+              v-model="disableReason"
+              rows="3"
+              required
+              class="form-input"
+              placeholder="Contoh: Selesai masa jabatan periode kepengurusan / Perangkat hilang"
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="isDisableModalOpen = false">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-danger" :disabled="isDisabling">
+              <UserX :size="16" />
+              <span>{{ isDisabling ? 'Memproses...' : 'Konfirmasi Nonaktifkan' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- MODAL EDIT PROFIL & KATA SANDI PENGGUNA -->
+    <div v-if="isEditUserModalOpen" class="modal-backdrop" @click="isEditUserModalOpen = false">
+      <div class="modal-dialog card" @click.stop>
+        <div class="modal-head">
+          <h3 class="modal-title">Edit Profil & Kata Sandi Pengurus</h3>
+          <button type="button" class="close-btn" @click="isEditUserModalOpen = false">✕</button>
+        </div>
+
+        <form @submit.prevent="handleSaveEditedUser" class="modal-body">
+          <p class="modal-desc">
+            Perbarui data akun untuk <strong>{{ userToEdit?.name }}</strong>.
+            <span v-if="authStore.isSuperAdmin">Sebagai Super Admin, Anda dapat mengubah nama, email, peran, kata sandi baru, dan izin halaman.</span>
+            <span v-else>Sebagai Admin, Anda dapat mengatur nama, kata sandi baru, dan izin halaman untuk Editor ini.</span>
+          </p>
+
+          <!-- NAMA -->
+          <div class="form-group">
+            <label class="form-label">Nama Lengkap Pengurus</label>
+            <input
+              v-model="editUserName"
+              type="text"
+              required
+              class="form-input"
+              placeholder="Contoh: Yohana Manuhutu"
+            />
+          </div>
+
+          <!-- EMAIL -->
+          <div class="form-group">
+            <div class="label-row">
+              <label class="form-label">Alamat Email</label>
+              <span v-if="authStore.isSuperAdmin" class="email-perm-badge super">Super Admin</span>
+              <span v-else class="email-perm-badge readonly">Hanya Baca</span>
+            </div>
+            <input
+              v-model="editUserEmail"
+              type="email"
+              required
+              :readonly="!authStore.isSuperAdmin"
+              class="form-input"
+              :class="{ 'is-readonly': !authStore.isSuperAdmin }"
+            />
+            <p v-if="!authStore.isSuperAdmin" class="field-hint">
+              Hanya Super Admin yang berwenang mengubah alamat email pengguna.
+            </p>
+          </div>
+
+          <!-- ROLE (HANYA SUPER ADMIN BISA MENGUBAH) -->
+          <div v-if="authStore.isSuperAdmin" class="form-group">
+            <label class="form-label">Peran Pengurus</label>
+            <select v-model="editUserRole" class="form-input">
+              <option value="ADMIN">Admin (Akses Penuh)</option>
+              <option value="EDITOR">Editor (Izin Halaman Spesifik)</option>
+            </select>
+          </div>
+
+          <!-- KATA SANDI BARU (TIDAK PERLU SANDI LAMA) -->
+          <div class="form-group perms-section">
+            <div class="label-row">
+              <label class="form-label">Ganti Kata Sandi Akun Ini (Opsional)</label>
+              <span class="email-perm-badge super">Tanpa Sandi Lama</span>
+            </div>
+            <input
+              v-model="editUserPassword"
+              type="password"
+              class="form-input"
+              placeholder="Minimal 8 karakter (kosongkan jika tidak diubah)"
+            />
+            <p class="field-hint">
+              Kosongkan field ini jika tidak ingin mengubah kata sandi. Jika diisi, kata sandi akun ini akan langsung diperbarui tanpa perlu memasukkan kata sandi sebelumnya.
+            </p>
+          </div>
+
+          <!-- PERIZINAN HALAMAN JIKA EDITOR -->
+          <div v-if="editUserRole === 'EDITOR'" class="form-group perms-section">
+            <label class="form-label">Izin Halaman Akses untuk Editor Ini:</label>
+            <div class="perms-checkboxes-grid">
+              <label
+                v-for="page in AVAILABLE_PAGE_PERMISSIONS"
+                :key="page.key"
+                class="perm-checkbox-item"
+              >
+                <input
+                  type="checkbox"
+                  :checked="editUserPermissions.includes(page.key)"
+                  @change="toggleEditPermission(page.key)"
+                />
+                <component :is="page.icon" :size="15" />
+                <span>{{ page.label }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="isEditUserModalOpen = false">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="isSavingUser">
+              <Save :size="16" />
+              <span>{{ isSavingUser ? 'Menyimpan...' : 'Simpan Perubahan Akun' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -205,11 +1522,13 @@ const logs = ref([
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .page-title {
   font-size: 1.75rem;
   margin: 0;
+  color: var(--navy);
 }
 
 .page-desc {
@@ -218,19 +1537,68 @@ const logs = ref([
   margin-top: 2px;
 }
 
+.reload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spin-anim {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ALERTS */
+.alert-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.success-alert {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #15803d;
+}
+
+.error-alert {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+}
+
+/* TABS */
 .tabs-nav {
   display: flex;
   gap: var(--space-2);
   padding: 6px;
   width: fit-content;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 18px;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
@@ -245,6 +1613,18 @@ const logs = ref([
   font-weight: 600;
 }
 
+.tab-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+}
+
+.tab-badge.info {
+  background: #0284c7;
+  color: white;
+}
+
 .tab-pane {
   padding: var(--space-8);
   display: flex;
@@ -255,22 +1635,78 @@ const logs = ref([
 .pane-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border);
+  gap: var(--space-4);
 }
 
 .pane-title {
   font-size: 1.35rem;
   margin: 0;
+  color: var(--navy);
 }
 
 .pane-desc {
   font-size: 0.85rem;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 4px;
+  line-height: 1.5;
 }
 
+/* INVITE BANNER */
+.invite-success-banner {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: var(--radius-md);
+}
+
+.invite-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: #dcfce7;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.invite-content {
+  flex: 1;
+}
+
+.invite-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #15803d;
+  margin: 0 0 4px;
+}
+
+.invite-desc {
+  font-size: 0.85rem;
+  color: #166534;
+  margin: 0 0 10px;
+}
+
+.invite-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.invite-url-field {
+  font-family: monospace;
+  font-size: 0.82rem;
+  background: white;
+  flex: 1;
+}
+
+/* FORMS */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -299,15 +1735,103 @@ const logs = ref([
 }
 
 .form-input {
-  padding: 12px 14px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.95rem;
+  background: white;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(12, 43, 138, 0.1);
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* PERMISSIONS PICKER */
+.perms-section {
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.perms-checkboxes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.perm-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.perms-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.perm-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+
+.perm-picker-item.is-selected {
+  background: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.perm-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.perm-picker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perm-picker-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.perm-picker-path {
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 /* DATA TABLE */
-.users-table-wrap {
+.users-table-wrap,
+.logs-table-wrap {
   overflow-x: auto;
 }
 
@@ -331,13 +1855,59 @@ const logs = ref([
 .data-table td {
   padding: 14px 16px;
   border-bottom: 1px solid #edf2f7;
+  vertical-align: middle;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.user-meta-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: #e2e8f0;
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-name-strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.user-email-muted {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.current-user-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--teal);
+  text-transform: uppercase;
 }
 
 .role-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
+  display: inline-block;
 }
 
 .role-badge.super {
@@ -345,75 +1915,477 @@ const logs = ref([
   color: #92400e;
 }
 
+.role-badge.admin {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
 .role-badge.editor {
   background: #e0f2fe;
   color: #0369a1;
 }
 
-.status-badge.active {
-  font-size: 0.75rem;
+/* PERMISSIONS TAGS IN TABLE */
+.perm-full-tag {
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #16a34a;
+  color: #1e40af;
+  background: #dbeafe;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
 }
 
-.text-muted {
-  color: var(--muted);
+.perm-tags-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.perm-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+}
+
+.perm-tag.none {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.green {
+  background: #16a34a;
+}
+
+.status-dot.yellow {
+  background: #ca8a04;
+}
+
+.status-dot.red {
+  background: #dc2626;
+}
+
+.status-badge.active {
+  color: #15803d;
+}
+
+.status-badge.pending {
+  color: #a16207;
+}
+
+.status-badge.disabled {
+  color: #991b1b;
+}
+
+.sessions-count {
   font-size: 0.82rem;
+  color: var(--muted);
 }
 
-/* LOGS */
-.logs-list {
+.sessions-count.has-sessions {
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-btn:hover {
+  background: #e2e8f0;
+}
+
+.action-btn.info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.action-btn.info:hover {
+  background: #dbeafe;
+}
+
+.action-btn.warning {
+  color: #b45309;
+}
+
+.action-btn.danger {
+  color: #dc2626;
+}
+
+.action-btn.success {
+  color: #15803d;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* MATRIX PER USER TAB */
+.th-perm-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.perm-toggle-cell {
+  padding: 10px !important;
+}
+
+.toggle-perm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toggle-perm-btn:hover {
+  background: #f1f5f9;
+}
+
+.toggle-perm-btn.is-active {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.perm-status-text {
+  font-size: 0.75rem;
+}
+
+.empty-matrix-card {
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+.empty-matrix-title {
+  font-size: 1.15rem;
+  margin: 0;
+  color: var(--navy);
+}
+
+.empty-matrix-desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+/* METRICS GRID */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.metric-card {
+  padding: var(--space-5);
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 6px 0 2px;
+}
+
+.metric-desc {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.text-success {
+  color: #15803d;
+}
+
+.text-warning {
+  color: #d97706;
+}
+
+.text-danger {
+  color: #dc2626;
+}
+
+.text-primary {
+  color: var(--navy);
+}
+
+/* SUB SECTIONS */
+.sub-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.sub-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-title {
+  font-size: 1.1rem;
+  margin: 0;
+  color: var(--navy);
+}
+
+.sub-desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* SESSIONS LIST */
+.sessions-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.log-item {
+.session-card {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: 12px 16px;
+  gap: var(--space-4);
+  padding: 14px 18px;
   background: #f8fafc;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  border: 1px solid #edf2f7;
 }
 
-.log-icon-wrap {
+.session-card.is-current {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.session-icon {
   color: var(--teal);
   flex-shrink: 0;
 }
 
-.log-info {
+.session-info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
-.log-line {
+.session-device-line {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 0.95rem;
 }
 
-.log-action {
-  font-size: 0.95rem;
+.current-session-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: #15803d;
+  color: white;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.danger-text {
+  color: #dc2626;
+}
+
+/* EVENT BADGES */
+.event-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+}
+
+.badge-green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-blue {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.event-meta-cell {
+  font-size: 0.8rem;
+  font-family: monospace;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-cell {
+  text-align: center;
+  padding: 30px !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* MODALS */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--space-4);
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 520px;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  background: white;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  margin: 0;
+  color: var(--navy);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.close-btn:hover {
   color: var(--ink);
 }
 
-.log-user {
-  font-size: 0.8rem;
-  color: var(--muted);
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.log-details {
-  font-size: 0.82rem;
-  color: #475569;
+.modal-desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.5;
   margin: 0;
 }
 
-.log-time {
-  font-size: 0.78rem;
-  color: var(--muted);
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: 1px solid #b91c1c;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
 }
 </style>
