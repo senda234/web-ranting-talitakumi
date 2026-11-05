@@ -40,6 +40,118 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     });
   }
 
+  // GOOGLE CALLBACK (Redirect dari Google OAuth 2.0 Flow)
+  if (action === 'google-callback' || action === 'callback' || url.pathname.includes('/callback')) {
+    const error = url.searchParams.get('error');
+    const code = url.searchParams.get('code');
+    const redirectUri = `${url.origin}/api/auth/callback/google`;
+
+    if (error) {
+      await logSecurityEvent({
+        eventType: 'GOOGLE_AUTH_CANCELLED_OR_ERROR',
+        severity: 'INFO',
+        ipAddress: ip,
+        userAgent,
+        details: `Google OAuth mengembalikan error: ${error}`,
+      });
+      res.writeHead(302, { Location: '/admin/login?error=cancelled' });
+      res.end();
+      return;
+    }
+
+    if (!code) {
+      res.writeHead(302, { Location: '/admin/login?error=missing_code' });
+      res.end();
+      return;
+    }
+
+    try {
+      const googleProfile = await exchangeGoogleAuthCode(code, redirectUri);
+      if (!googleProfile) {
+        res.writeHead(302, { Location: '/admin/login?error=oauth_failed' });
+        res.end();
+        return;
+      }
+
+      if (!googleProfile.email_verified) {
+        res.writeHead(302, { Location: '/admin/login?error=unverified_email' });
+        res.end();
+        return;
+      }
+
+      const normalizedEmail = googleProfile.email.toLowerCase().trim();
+      let user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { googleSub: googleProfile.sub },
+            { emailNormalized: normalizedEmail },
+            { email: normalizedEmail },
+          ],
+        },
+      });
+
+      if (!user) {
+        await logSecurityEvent({
+          eventType: 'LOGIN_FAILED_UNINVITED_GOOGLE_ACCOUNT',
+          severity: 'WARN',
+          actorEmail: normalizedEmail,
+          ipAddress: ip,
+          userAgent,
+          details: `Upaya login Google dari akun yang belum didaftarkan: ${normalizedEmail}`,
+        });
+        res.writeHead(302, { Location: '/admin/login?error=not_invited' });
+        res.end();
+        return;
+      }
+
+      if (!user.isActive || user.status === 'DISABLED') {
+        res.writeHead(302, { Location: '/admin/login?error=disabled' });
+        res.end();
+        return;
+      }
+
+      if (user.status === 'LOCKED' || user.status === 'DELETED') {
+        res.writeHead(302, { Location: '/admin/login?error=locked' });
+        res.end();
+        return;
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleSub: googleProfile.sub,
+          googleEmail: googleProfile.email,
+          googleLinkedAt: user.googleLinkedAt || new Date(),
+          emailVerifiedAt: user.emailVerifiedAt || new Date(),
+          emailNormalized: normalizedEmail,
+          authProvider: 'GOOGLE',
+          status: 'ACTIVE',
+          isActive: true,
+          lastLoginAt: new Date(),
+        },
+      });
+
+      await createDatabaseSession(user.id, req, res);
+
+      await logSecurityEvent({
+        eventType: 'LOGIN_SUCCESS_GOOGLE',
+        severity: 'INFO',
+        actorEmail: normalizedEmail,
+        ipAddress: ip,
+        userAgent,
+        details: `Login Google berhasil untuk ${user.name} (${user.role})`,
+      });
+
+      res.writeHead(302, { Location: '/admin' });
+      res.end();
+      return;
+    } catch {
+      res.writeHead(302, { Location: '/admin/login?error=server_error' });
+      res.end();
+      return;
+    }
+  }
+
   // GOOGLE LOGIN (Verifikasi identitas akun Google dari browser)
   if (action === 'google-login') {
     if (req.method !== 'POST') {

@@ -36,6 +36,12 @@ function apiDevPlugin(): Plugin {
             if (fs.existsSync(resourceFile)) filePath = resourceFile;
           }
 
+          // Cek api/me/[resource].ts
+          if (!filePath && pathname.startsWith('/api/me/')) {
+            const meFile = path.resolve(__dirname, './api/me/[resource].ts');
+            if (fs.existsSync(meFile)) filePath = meFile;
+          }
+
           // 4. Cek api/cloudinary/sign -> api/admin/cloudinary/signature.ts
           if (!filePath && (pathname === '/api/cloudinary/sign' || pathname === '/api/admin/cloudinary/signature')) {
             const signFile = path.resolve(__dirname, './api/admin/cloudinary/signature.ts');
